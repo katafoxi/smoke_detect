@@ -10,107 +10,27 @@
 # its affiliates is strictly prohibited.
 ####################################################################################################
 
-
-# https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_using_custom_model.html#cuda-engine-creation-for-custom-models
 property:
-  ##################################################################################################
-  #Gst-nvinfer plugin, Gst properties
-  ##################################################################################################
-
-  ## Режим (первичный или вторичный), в котором элемент должен работать. 1=Primary  2=Secondary
-  gie-mode: 1
-
-  ## Идентификатор устройства графического процессора, который будет использоваться для предварительной обработки/вывода (только для dGPU)
   gpu-id: 0
-
-  ## Указывает количество последовательных пакетов, которые следует пропустить для вывода.
-  interval: 0
-  ##################################################################################################
-  ##################################################################################################
-
-
-  ## Type of network Integer 0:Detector 1:Classifier 2:Segmentation
-  network-type: 2
-
-  ##(all, both) Путь к файлу модели ONNX
+  net-scale-factor: 0.00392156862745098
   onnx-file: ../../models/Primary_Detector/my_model.onnx
-
-  ##(all, both) Путь к файлу сериализованного движка модели
   model-engine-file: ../../models/Primary_Detector/my_model.onnx_b2_gpu0_fp16.engine
-
-  ##(Detector & classifier, Both) Путь к текстовому файлу, содержащему метки для модели
-  #labelfile-path: ../../models/Primary_Detector/labels_smoke.txt
-
-  ##(all, both) Формат данных, который будет использоваться при выводе 0=FP32, 1=INT8, 2=FP16 mode
-  network-mode: 2
-
-  ##(all, both) Pixel normalization factor Коэффициент нормализации пикселей
-  net-scale-factor: 1.0
-
-  ##(all, both) Путь к файлу конфигурации для пользовательских сетей, доступному в пользовательском интерфейсе для создания движков CUDA.
-  #custom-network-config=/home/ubuntu/network.config
-
-  ##(all, both) Путь к файлу калибровки INT8 для регулировки динамического диапазона с помощью модели FP32
+  #labelfile-path: ../../models/Primary_Detector/labels.txt
   #int8-calib-file: ../../models/Primary_Detector/cal_trt.bin
-
-  ##(all, both) Количество кадров/объектов, которые будут выведены вместе в пакете
   batch-size: 2
-
-  ##(all, both) Привязка размеров для установки на входном слое изображения.
-  #infer-dims: 3;544;960
-
-  ##(all, both) Infer Processing Mode (0):None, (1)FullFrame, (2)ClipObject. Если установлено, может заменить input_control.
-  #process-mode=1
-
-  ##(all, both) Формат цвета, требуемый моделью Целое число 0: RGB 1: BGR 2: GRAY
+  process-mode: 1
   model-color-format: 0
-
-  ##(all, both) Массив средних значений цветовых компонентов, которые необходимо вычесть из каждого пикселя. Длина массива должна быть равна количеству цветовых компонентов в кадре. Плагин умножает средние значения на net-scale-factor.
-  #offsets=77.5;21.2;11.8
-  #offsets: 127.5; 127.5; 127.5
-
-  ##(all, both) GIE присваивается уникальный идентификатор, позволяющий приложению и другим элементам идентифицировать обнаруженные ограничивающие рамки и метки.
+  ## 0=FP32, 1=INT8, 2=FP16 mode
+  network-mode: 2
+  num-detected-classes: 1
+  interval: 0
   gie-unique-id: 1
-
-  ##(all, both) Уникальный идентификатор GIE, на основе метаданных (ограничивающих рамок) которого будет работать этот GIE
-  #operate-on-gie-id: 1
-
-  ##(all, both) Идентификаторы классов родительского GIE, на котором будет работать данный GIE
-  #operate-on-class-ids: 1;2
-
-  ##(all, both) Абсолютный путь к библиотеке, содержащей пользовательские реализации методов для пользовательских моделей
-  #custom-lib-path: /path/to/this/directory/libnvds_infercustomparser.so
-
-  ##(all, both) Фильтр, используемый для масштабирования кадров/обрезки объектов до разрешения сети
-  #scaling-filter: 0
-
-  ##(all, both) Вычислительное оборудование, используемое для масштабирования кадров/обрезки объектов до разрешения сети. 0:Platform default – GPU (dGPU), VIC (Jetson) 1:GPU   2:VIC (Jetson only)
-  #scaling-compute-hw: 0
-
-  ##(Detector) Количество классов, обнаруженных сетью
-  #num-detected-classes: 1
-
-  ##(Detector, both) Имя пользовательской функции разбора ограничивающего поля. Если не указано, Gst-nvinfer использует внутреннюю функцию для модели resnet, предоставленную SDK
   #parse-bbox-func-name: NvDsInferParseCustomResnet
-
-  ##(Detector, Both) Алгоритм кластеризации для использования. Обратитесь к следующей таблице для настройки конкретных параметров алгоритма. 1=DBSCAN, 2=NMS, 3=DBSCAN+NMS Hybrid, 4=None(No clustering)
-  #cluster-mode: 2
-
-  ##(Segmentation, Both) Порог уверенности для модели сегментации, чтобы вывести допустимый класс для пикселя. Если уверенность меньше этого порога, выход класса для этого пикселя равен −1.
-  segmentation-threshold: 0
-
-  ##specify the output tensor order, 0(default value) for CHW and 1 for HWC
-  ## укажите порядок выходного тензора: 0 (значение по умолчанию) для CHW и 1 для HWC
-  segmentation-output-order: 1
-
-class-attrs-all:
-  roi-top-offset: 0
-  roi-bottom-offset: 0
-  detected-min-w: 0
-  detected-min-h: 0
-  detected-max-w: 0
-  detected-max-h: 0
- 
+  #custom-lib-path: /path/to/this/directory/libnvds_infercustomparser.so
+  ## 1=DBSCAN, 2=NMS, 3= DBSCAN+NMS Hybrid, 4 = None(No clustering)
+  cluster-mode: 2
+  #scaling-filter: 0
+  #scaling-compute-hw: 0
 
 #Use the config params below for dbscan clustering mode
 #class-attrs-all:
@@ -119,16 +39,16 @@ class-attrs-all:
   #minBoxes: 3
 
 #Use the config params below for NMS clustering mode
-# class-attrs-all:
-#   topk: 20
-#   nms-iou-threshold: 0.5
-#   pre-cluster-threshold: 0.2
+class-attrs-all:
+  topk: 20
+  nms-iou-threshold: 0.5
+  pre-cluster-threshold: 0.2
 
 ## Per class configurations
-# class-attrs-0:
-#   topk: 20
-#   nms-iou-threshold: 0.5
-#   pre-cluster-threshold: 0.4
+class-attrs-0:
+  topk: 20
+  nms-iou-threshold: 0.5
+  pre-cluster-threshold: 0.4
 
 #class-attrs-1:
   #pre-cluster-threshold: 0.05
@@ -144,4 +64,3 @@ class-attrs-all:
   #pre-cluster-threshold: 0.05
   #eps: 0.7
   #dbscan-min-score: 0.5
-
