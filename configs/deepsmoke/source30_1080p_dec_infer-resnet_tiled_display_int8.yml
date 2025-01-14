@@ -12,11 +12,16 @@
 
 
 ### https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#sink-group
+
+## Конфигурации приложений, не связанные с конкретным компонентом.
+## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#application-group
 application:
   enable-perf-measurement: 1
   perf-measurement-interval-sec: 5
   #gie-kitti-output-dir: streamscl
 
+## Плиточное отображение в приложении.
+## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#tiled-display-group
 tiled-display:
   enable: 0
   rows: 1
@@ -31,9 +36,15 @@ tiled-display:
   #(4): nvbuf-mem-surface-array - Allocate Surface Array memory, applicable for Jetson
   nvbuf-memory-type: 0
 
+
+## Свойства источника. Источников может быть несколько. Группы должны быть названы как: [source0], [source1] …
+## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#source-group
 source:
   csv-file-path: sources_1.csv
 
+
+## Укажите свойства и измените поведение компонентов приемника, которые представляют выходные данные, такие как дисплеи и файлы для рендеринга, кодирования и сохранения файлов. Конвейер может содержать несколько приемников.
+## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#sink-group
 sink0:
   enable: 1
   #Type - 1=FakeSink 2=EglSink/nv3dsink (Jetson only) 3=File
@@ -80,6 +91,8 @@ sink2:
   rtsp-port: 8554
   udp-port: 5400
 
+## Укажите свойства и измените компонент экранного меню (OSD), который накладывает текст и прямоугольники на рамку.
+## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#osd-group
 osd:
   enable: 1
   gpu-id: 0
@@ -95,6 +108,10 @@ osd:
   clock-color: 1;0;0;0
   nvbuf-memory-type: 0
 
+
+## Плагин Gst-nvstreammux формирует пакет кадров из нескольких источников входных данных. 
+## Укажите свойства и измените поведение компонента streammux.
+## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_plugin_gst-nvstreammux.html
 streammux:
   gpu-id: 0
   ##Boolean property to inform muxer that sources are live
@@ -114,9 +131,13 @@ streammux:
   ## If set to FALSE, ntp timestamp from rtspsrc, if available, will be attached
   # attach-sys-ts-as-ntp=1
 
-# config-file property is mandatory for any gie section.
-# Other properties are optional and if set will override the properties set in
-# the infer config file.
+
+
+## Укажите свойства и измените поведение первичного GIE. 
+## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#primary-gie-and-secondary-gie-group
+# Свойство config-file является обязательным для любого раздела gie.
+# Другие свойства являются необязательными, и если они установлены, они переопределяют свойства, установленные в
+# выводной файл конфигурации.
 primary-gie:
   enable: 1
   gpu-id: 0
@@ -135,5 +156,8 @@ primary-gie:
   nvbuf-memory-type: 0
   config-file: config_infer_primary_desc.yml
 
+
+## Диагностика и отладка. Эта группа является экспериментальной.
+## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#tests-group
 tests:
   file-loop: 0
