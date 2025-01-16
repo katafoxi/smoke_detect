@@ -39,7 +39,7 @@ application:
   #shadow-track-output-dir: ­/home/­ubuntu/­shadow_data_tracker/
 
   ##(dGPU, Jetson, Integer) При необходимости установите глобальный идентификатор графического процессора для всех компонентов одновременно.
-  global-gpu-id: 1
+  global-gpu-id: 0
 
 
 
@@ -52,7 +52,10 @@ application:
 ## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#tiled-display-group
 tiled-display:
 
-  ## (dGPU, Jetson, Integer, 0 = disabled, 1 = tiler-enabled 2 = tiler-and-parallel-demux-to-sink-enabled) Указывает, включено ли мозаичное отображение. Когда пользователь устанавливает Enable=2, первая группа [приемника] с ключом: link-to-demux=1 должна быть связана с панелью src_[source_id] демультиплексора, где source_id — это ключ, установленный в соответствующей группе [приемника].
+  ## (dGPU, Jetson, Integer, ) Указывает, включено ли мозаичное отображение. Когда пользователь устанавливает Enable=2, первая группа [приемника] с ключом: link-to-demux=1 должна быть связана с панелью src_[source_id] демультиплексора, где source_id — это ключ, установленный в соответствующей группе [приемника].
+  # 0 = отключено, 
+  # 1 = плитка включена 
+  # 2 = включена плитка и параллельный демультиплексор к приемнику
   enable: 0
 
   ##(dGPU, Jetson, Integer, >0) Количество строк в мозаичном 2D-массиве.
@@ -99,7 +102,7 @@ tiled-display:
 ## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#source-group
 source:
   #Был в примере
-  #csv-file-path: sources_1.csv
+  csv-file-path: sources_1.csv
 
   ##(dGPU, Jetson, Boolean) Включает или отключает источник.
   enable: 1
@@ -136,40 +139,39 @@ source:
   #num-extra-surfaces: 5
 
   ##(dGPU, Integer, ≥0) Графический процессор, который будет использоваться элементом в случае нескольких графических процессоров.
-  #gpu-id: 1
+  #gpu-id: 0
 
   ##(dGPU, Jetson, Integer, ≥0) Уникальный идентификатор источника входных данных, который будет добавлен в метаданные. (Необязательный)
   #camera-id: 2
 
   ##(dGPU, Jetson, Integer, >0) Ширина кадров, запрашиваемых с камеры, в пикселях. Действительно, когда тип = 1 или 5.
-  camera-width: 1920
+  #camera-width: 1920
 
   ##(dGPU, Jetson, Integer, >0) Высота кадров, запрашиваемых с камеры, в пикселях. Действительно, когда тип = 1 или 5.
-  camera-height: 1080
+  #camera-height: 1080
 
   ##(dGPU, Jetson, Integer, >0) Числитель — часть дроби, определяющая частоту кадров, запрошенную камерой, в кадрах/сек. Действительно, когда тип = 1 или 5.
-  camera-fps-n: 30
+  #camera-fps-n: 30
 
   ##(dGPU, Jetson, Integer, >0) Знаменатель — часть дроби, определяющая частоту кадров, запрашиваемую у камеры, в кадрах/сек. Действительно, когда тип = 1 или 5.
-  camera-fps-d: 1
+  #camera-fps-d: 1
 
   ##(dGPU, Jetson, Integer, >0) Номер узла устройства V4L2. Например, /dev/video<num> для пути захвата камеры V4L2 с открытым исходным кодом. Действительно, когда настройка типа (тип источника) равна 1.
-  camera-v4l2-dev-node: 1
+  #camera-v4l2-dev-node: 1
 
   ##(dGPU, Jetson, Integer, ≥0) Размер джиттербуфера в миллисекундах; применимо только для потоков RTSP.
   #latency: 200
 
   ##(Jetson, Integer, ≥0) Идентификатор датчика модуля камеры. Действительно, когда тип (тип источника) равен 5.
-  camera-csi-sensor-id: 1
+  #camera-csi-sensor-id: 1
 
   ##(dGPU, Jetson,Integer,) Интервал для пропуска кадров. Например, 5 означает, что декодер выводит каждый пятый кадр; 0 означает, что кадры не удаляются.
-  drop-frame-interval: 2
-
+  #drop-frame-interval: 2
 
   ##(dGPU, Jetson, Integer, 0 or 4) Транспортный протокол, используемый для RTP. Действительно, когда тип (тип источника) равен 4.
   # 0: UDP + UDP Multicast + TCP
   # 4: TCP only
-  select-rtp-protocol: 4
+  #select-rtp-protocol: 4
 
   ##(dGPU, Jetson, Integer, ≥0) Таймаут в секундах ожидания с момента получения последних данных от источника RTSP перед принудительным повторным подключением. Установка значения 0 отключит повторное подключение. Действительно, когда тип (тип источника) равен 4.
   #rtsp-reconnect-interval-sec: 60
@@ -231,168 +233,160 @@ source:
 
 ## Укажите свойства и измените поведение компонентов приемника, которые представляют выходные данные, такие как дисплеи и файлы для рендеринга, кодирования и сохранения файлов. Конвейер может содержать несколько приемников.
 ## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#sink-group
+#Группа приемников определяет свойства и изменяет поведение компонентов приемника для рендеринга, кодирования и сохранения файлов.
 sink0:
+  ##(dGPU, Jetson, Boolean) Включает или отключает приемник.
   enable: 1
-  #Type - 1=FakeSink 2=EglSink/nv3dsink (Jetson only) 3=File
+
+  ##(dGPU, Jetson, Integer, 1, 2, 3, 4, 5 or 6) Тип раковины, которую следует использовать.
+  # 1: Фейксинк
+  # 2: Оконный nveglglessink на основе EGL для dGPU и nv3dsink для Jetson
+  # 3: Кодирование + сохранение файла (кодер + мультиплексор + файловый приемник)
+  # 4: Кодирование + потоковая передача RTSP; Примечание. sync=1 для этого типа неприменим;
+  # 5: nvdrmvideosink (только Jetson)
+  # 6: Конвертер сообщений + брокер сообщений
   type: 2
-  sync: 1
+
+  ##(dGPU, Jetson, Integer, 0 or 1) Указывает, насколько быстро должен обрабатываться поток.
+  # 0: Как можно быстрее
+  # 1: Синхронно
+  sync: 0
+
+  ##(dGPU, Jetson, Boolean) Указывает, должен ли приемник генерировать события качества обслуживания, которые могут привести к пропуску кадров конвейера, если FPS конвейера не соответствует частоте кадров потока.
+  qos: 0
+
+  ##(dGPU, Jetson, Integer, ≥0) Идентификатор источника, буферы которого должен использовать этот приемник. Идентификатор источника содержится в имени группы источников. Например, для группы [source1] source-id=1.
   source-id: 0
+
+  ##(dGPU, Integer, ≥0) Графический процессор, который будет использоваться элементом в случае нескольких графических процессоров.
   gpu-id: 0
+
+  ##(dGPU, Jetson, Integer, 1 or 2) Контейнер, используемый для сохранения файла. Действительно только для типа = 3.
+  # 1: MP4
+  # 2: MKV
+  container: 1
+
+  ##(dGPU, Jetson, Integer, 1 or 2) Кодировщик, который будет использоваться для сохранения файла.
+  # 1: H.264 (hardware)
+  # 2: H.265 (hardware)
+  codec: 1
+
+  ##(dGPU, Jetson, Integer, >0) Битрейт, используемый для кодирования, в битах в секунду. Действительно для типа = 3 и 4.
+  bitrate: 4000000
+
+  ##(dGPU, Jetson, Integer, 0≤iv≤MAX_INT) Частота появления внутрикадра кодирования.
+  #iframeinterval: 30
+
+  ##(dGPU, Jetson, String) Путь к выходному закодированному файлу. Действительно только для типа = 3.
+  #output-file: ­/home/­ubuntu/­output.mp4
+
+  ##(dGPU, Jetson, Integer, 0, 1, 2, or 3) Тип памяти CUDA, которую плагин должен выделить для выходных буферов.
+  # 0 (nvbuf-mem-default): a platform-specific default
+  # 1 (nvbuf-mem-cuda-pinned): pinned/host CUDA memory
+  # 2 (nvbuf-mem-cuda-device): Device CUDA memory
+  # 3 (nvbuf-mem-cuda-unified): Unified CUDA memory
+  # For dGPU: All values are valid.
+  # For Jetson: Only 0 (zero) Is valid.
   nvbuf-memory-type: 0
 
-##(dGPU, Jetson, Boolean) Включает или отключает приемник.
-enable: 1
+  ##(dGPU, Jetson, Integer) Порт для сервера потоковой передачи RTSP; действительный неиспользуемый номер порта. Действительно для типа = 4.
+  #rtsp-port: 8554
 
-##(dGPU, Jetson, Integer, 1, 2, 3, 4, 5 or 6) Тип раковины, которую следует использовать.
-# 1: Фейксинк
-# 2: Оконный nveglglessink на основе EGL для dGPU и nv3dsink для Jetson
-# 3: Кодирование + сохранение файла (кодер + мультиплексор + файловый приемник)
-# 4: Кодирование + потоковая передача RTSP; Примечание. sync=1 для этого типа неприменим;
-# 5: nvdrmvideosink (только Jetson)
-# 6: Конвертер сообщений + брокер сообщений
-type: 2
+  ##(dGPU, Jetson, Integer) Порт, используемый внутри реализации потоковой передачи — действительный неиспользуемый номер порта. Действительно для типа = 4.
+  #udp-port: 5400
 
-##(dGPU, Jetson, Integer, 0 or 1) Указывает, насколько быстро должен обрабатываться поток.
-# 0: Как можно быстрее
-# 1: Синхронно
-sync: 0
+  ##(Jetson, Integer, >=1) Индекс соединения. Действительно для nvdrmvideosink(type=5).
+  #conn-id: 0
 
-##(dGPU, Jetson, Boolean) Указывает, должен ли приемник генерировать события качества обслуживания, которые могут привести к пропуску кадров конвейера, если FPS конвейера не соответствует частоте кадров потока.
-qos: 0
+  ##(dGPU, Jetson, Integer, >=1) Ширина рендерера в пикселях.
+  width: 1920
 
-?
-##(dGPU, Jetson, Integer, ≥0) Идентификатор источника, буферы которого должен использовать этот приемник. Идентификатор источника содержится в имени группы источников. Например, для группы [source1] source-id=1.
-source-id: 1
+  ##(dGPU, Jetson, Integer, >=1) Высота рендерера в пикселях.
+  height: 1920
 
-##(dGPU, Integer, ≥0) Графический процессор, который будет использоваться элементом в случае нескольких графических процессоров.
-#gpu-id: 1
+  ##(dGPU, Jetson, Integer, >=1) Горизонтальное смещение окна рендеринга в пикселях.
+  #offset-x: 100
 
-##(dGPU, Jetson, Integer, 1 or 2) Контейнер, используемый для сохранения файла. Действительно только для типа = 3.
-# 1: MP4
-# 2: MKV
-container: 1
+  ##(dGPU, Jetson, Integer, >=1) Вертикальное смещение окна рендеринга в пикселях.
+  #offset-y: 100
 
-##(dGPU, Jetson, Integer, 1 or 2) Кодировщик, который будет использоваться для сохранения файла.
-# 1: H.264 (hardware)
-# 2: H.265 (hardware)
-codec: 1
+  ##(Jetson, Integer, ≥0) Плоскость, на которой должно отображаться видео. Действительно для nvdrmvideosink(type=5).
+  #plane-id: 0
 
-##(dGPU, Jetson, Integer, >0) Битрейт, используемый для кодирования, в битах в секунду. Действительно для типа = 3 и 4.
-bitrate: 4000000
+  ##(dGPU, Jetson, String) Путь к файлу конфигурации для элемента Gst-nvmsgconv (тип = 6).
+  #msg-conv-config: dstest5_msgconv_sample_config.txt
 
-##(dGPU, Jetson, Integer, 0≤iv≤MAX_INT) Частота появления внутрикадра кодирования.
-#iframeinterval: 30
+  ##(dGPU, Jetson, String) Путь к реализации адаптера протокола использует Gst-nvmsgbroker (тип = 6).
+  #msg-broker-proto-lib: /opt/nvidia/deepstream/deepstream-5.0/lib/libnvds_amqp_proto.so
 
-##(dGPU, Jetson, String) Путь к выходному закодированному файлу. Действительно только для типа = 3.
-#output-file: ­/home/­ubuntu/­output.mp4
+  ##(dGPU, Jetson, String) Строка подключения внутреннего сервера (тип=6).
+  #msg-broker-conn-str: foo.bar.com;80;dsapp
 
-##(dGPU, Jetson, Integer, 0, 1, 2, or 3) Тип памяти CUDA, которую плагин должен выделить для выходных буферов.
-# 0 (nvbuf-mem-default): a platform-specific default
-# 1 (nvbuf-mem-cuda-pinned): pinned/host CUDA memory
-# 2 (nvbuf-mem-cuda-device): Device CUDA memory
-# 3 (nvbuf-mem-cuda-unified): Unified CUDA memory
-# For dGPU: All values are valid.
-# For Jetson: Only 0 (zero) Is valid.
-nvbuf-memory-type: 0
+  ##(dGPU, Jetson, String) Название темы сообщения (тип=6).
+  #topic: test-ds4
 
-##(dGPU, Jetson, Integer) Порт для сервера потоковой передачи RTSP; действительный неиспользуемый номер порта. Действительно для типа = 4.
-#rtsp-port: 8554
+  ##(dGPU, Jetson, Integer 0, 1, 256, or 257) Тип полезной нагрузки.
+  # 0, PAYLOAD_DEEPSTREAM: Полезная нагрузка схемы DeepStream.
+  # 1, PAYLOAD_DEEPSTREAM_-MINIMAL: Полезная нагрузка схемы DeepStream минимальна.
+  # 256, PAYLOAD_RESERVED: Reserved type.
+  # 257, PAYLOAD_CUSTOM: Custom schema payload (type=6).
+  #msg-conv-payload-type: 0
 
-##(dGPU, Jetson, Integer) Порт, используемый внутри реализации потоковой передачи — действительный неиспользуемый номер порта. Действительно для типа = 4.
-udp-port: 5400
+  ##(dGPU, Jetson, String) Путь к дополнительному файлу конфигурации для элемента Gst-nvmsgbroker (тип = 6).
+  #msg-broker-config: /home/ubuntu/cfg_amqp.txt
 
-##(Jetson, Integer, >=1) Индекс соединения. Действительно для nvdrmvideosink(type=5).
-conn-id: 0
+  ##(dGPU Jetson) Время сна между последовательными вызовами do_work в миллисекундах
+  #Целое число >= 0. Для Azure используйте значение >= 10 в зависимости от ограничения скорости сообщений уровня службы Центра Интернета вещей. Предупреждение: сбой возможен при неоправданно большом времени сна, например. 10000000 мс
+  #sleep-time: 10
 
-##(dGPU, Jetson, Integer, >=1) Ширина рендерера в пикселях.
-width: 1920
+  ##(dGPU, Jetson, Integer) используйте API-интерфейс библиотеки адаптера протокола напрямую или используйте новый API-интерфейс оболочки библиотеки msgbroker (тип = 6)
+  # 0 : Use adapter api’s directly
+  # 1 : msgbroker lib wrapper api’s
+  #new-api: 0
 
-##(dGPU, Jetson, Integer, >=1) Высота рендерера в пикселях.
-height: 1920
+  ##(dGPU, Jetson, String) Абсолютный путь к дополнительной пользовательской библиотеке создания полезных данных. Эта библиотека реализует API, определенный в source/libs/nvmsgconv/nvmsgconv.h. Применимо только в том случае, если msg-conv-payload-type=257, PAYLOAD_CUSTOM. (тип=6)
+  #msg-conv-msg2p-lib: /opt/nvidia/deepstream/deepstream-4.0/lib/libnvds_msgconv.so
 
-##(dGPU, Jetson, Integer, >=1) Горизонтальное смещение окна рендеринга в пикселях.
-offset-x: 100
+  ##(dGPU, Jetson, Integer, >=0) свойство comp-id Gst элемента nvmsgconv; Идентификатор (gie-unique-id) первичного/вторичного компонента gie, из которого должны обрабатываться метаданные. (тип=6)
+  #msg-conv-comp-id: 1
 
-##(dGPU, Jetson, Integer, >=1) Вертикальное смещение окна рендеринга в пикселях.
-offset-y: 100
+  ##(dGPU, Jetson, Integer, >=0) свойство comp-id Gst элемента nvmsgbroker; Идентификатор (gie-unique-id) первичного/вторичного компонента gie, из которого должны обрабатываться метаданные. (тип=6)
+  #msg-broker-comp-id: 1
 
-##(Jetson, Integer, ≥0) Плоскость, на которой должно отображаться видео. Действительно для nvdrmvideosink(type=5).
-plane-id: 0
+  ##(dGPU Jetson, String) Каталог для дампа полезных данных (тип = 6)
+  #debug-payload-dir:<absolute path> #Default is NULL
 
-##(dGPU, Jetson, String) Путь к файлу конфигурации для элемента Gst-nvmsgconv (тип = 6).
-#msg-conv-config: dstest5_msgconv_sample_config.txt
+  ##(“dGPU Jetson”, Boolean) Создать несколько полезных данных сообщения (тип = 6)
+  #multiple-payloads: 1 #(Default is 0)
 
-##(dGPU, Jetson, String) Путь к реализации адаптера протокола использует Gst-nvmsgbroker (тип = 6).
-#msg-broker-proto-lib: /opt/nvidia/deepstream/deepstream-5.0/lib/libnvds_amqp_proto.so
+  ##(“dGPU Jetson”, Boolean) Генерация полезных данных с использованием метаданных кадра/объекта буфера Gst (тип = 6).
+  #msg-conv-msg2p-new-api: 1 #(Default is 0)
 
-##(dGPU, Jetson, String) Строка подключения внутреннего сервера (тип=6).
-#msg-broker-conn-str: foo.bar.com;80;dsapp
+  ##(dGPU Jetson, Integer, 1 to 4,294,967,295) Интервал кадров, в котором генерируется полезная нагрузка (тип = 6)
+  #msg-conv-frame-interval: 25 #(Default is 30)
 
-##(dGPU, Jetson, String) Название темы сообщения (тип=6).
-#topic: test-ds4
+  ##(dGPU, Jetson, Integer,) Добавляйте только компонент брокера сообщений вместо конвертера сообщений + брокера сообщений. (тип=6)
+  #disable-msgconv: 1
 
-##(dGPU, Jetson, Integer 0, 1, 256, or 257) Тип полезной нагрузки.
-# 0, PAYLOAD_DEEPSTREAM: Полезная нагрузка схемы DeepStream.
-# 1, PAYLOAD_DEEPSTREAM_-MINIMAL: Полезная нагрузка схемы DeepStream минимальна.
-# 256, PAYLOAD_RESERVED: Reserved type.
-# 257, PAYLOAD_CUSTOM: Custom schema payload (type=6).
-msg-conv-payload-type: 0
+  ##(dGPU, Jetson, Integer, 0 or 1) Движок, используемый для кодировщика
+  # 0: NVENC hardware engine
+  # 1: CPU software encoder
+  enc-type: 0
 
-##(dGPU, Jetson, String) Путь к дополнительному файлу конфигурации для элемента Gst-nvmsgbroker (тип = 6).
-#msg-broker-config: /home/ubuntu/cfg_amqp.txt
+  ##(dGPU, Jetson, Integer, valid values from the column beside) Профиль кодера для кодека V4L2 H264 (HW):
+  # 0: Baseline
+  # 2: Main
+  # 4: High
+  # ##V4L2 H265 encoder(HW):
+  # 0: Main
+  # 1: Main10
+  profile: 2
 
-##(dGPU Jetson) Время сна между последовательными вызовами do_work в миллисекундах
-#Целое число >= 0. Для Azure используйте значение >= 10 в зависимости от ограничения скорости сообщений уровня службы Центра Интернета вещей. Предупреждение: сбой возможен при неоправданно большом времени сна, например. 10000000 мс
-sleep-time: 10
+  ##(dGPU, Jetson, Integer, >=0) Размер буфера ядра UDP (в байтах) для внутреннего выходного конвейера RTSP.
+  #udp-buffer-size: 100000
 
-##(dGPU, Jetson, Integer) используйте API-интерфейс библиотеки адаптера протокола напрямую или используйте новый API-интерфейс оболочки библиотеки msgbroker (тип = 6)
-# 0 : Use adapter api’s directly
-# 1 : msgbroker lib wrapper api’s
-#new-api: 0
-
-##(dGPU, Jetson, String) Абсолютный путь к дополнительной пользовательской библиотеке создания полезных данных. Эта библиотека реализует API, определенный в source/libs/nvmsgconv/nvmsgconv.h. Применимо только в том случае, если msg-conv-payload-type=257, PAYLOAD_CUSTOM. (тип=6)
-#msg-conv-msg2p-lib: /opt/nvidia/deepstream/deepstream-4.0/lib/libnvds_msgconv.so
-
-##(dGPU, Jetson, Integer, >=0) свойство comp-id Gst элемента nvmsgconv; Идентификатор (gie-unique-id) первичного/вторичного компонента gie, из которого должны обрабатываться метаданные. (тип=6)
-#msg-conv-comp-id: 1
-
-##(dGPU, Jetson, Integer, >=0) свойство comp-id Gst элемента nvmsgbroker; Идентификатор (gie-unique-id) первичного/вторичного компонента gie, из которого должны обрабатываться метаданные. (тип=6)
-#msg-broker-comp-id: 1
-
-##(dGPU Jetson, String) Каталог для дампа полезных данных (тип = 6)
-#debug-payload-dir:<absolute path> #Default is NULL
-
-##(“dGPU Jetson”, Boolean) Создать несколько полезных данных сообщения (тип = 6)
-#multiple-payloads: 1 #(Default is 0)
-
-##(“dGPU Jetson”, Boolean) Генерация полезных данных с использованием метаданных кадра/объекта буфера Gst (тип = 6).
-#msg-conv-msg2p-new-api: 1 #(Default is 0)
-
-##(dGPU Jetson, Integer, 1 to 4,294,967,295) Интервал кадров, в котором генерируется полезная нагрузка (тип = 6)
-msg-conv-frame-interval: 25 #(Default is 30)
-
-##(dGPU, Jetson, Integer,) Добавляйте только компонент брокера сообщений вместо конвертера сообщений + брокера сообщений. (тип=6)
-#disable-msgconv: 1
-
-##(dGPU, Jetson, Integer, 0 or 1) Движок, используемый для кодировщика
-# 0: NVENC hardware engine
-# 1: CPU software encoder
-enc-type: 0
-
-##(dGPU, Jetson, Integer, valid values from the column beside) Профиль кодера для кодека V4L2 H264 (HW):
-# 0: Baseline
-# 2: Main
-# 4: High
-# ##V4L2 H265 encoder(HW):
-# 0: Main
-# 1: Main10
-profile: 2
-
-##(dGPU, Jetson, Integer, >=0) Размер буфера ядра UDP (в байтах) для внутреннего выходного конвейера RTSP.
-#udp-buffer-size: 100000
-
-##(dGPU, Jetson, Boolean) Логическое значение, которое включает или отключает потоковую передачу только определенного «идентификатора источника» в этот приемник. Пожалуйста, проверьте кнопку включения группы мозаичного отображения для получения дополнительной информации.
-link-to-demux: 0
+  ##(dGPU, Jetson, Boolean) Логическое значение, которое включает или отключает потоковую передачу только определенного «идентификатора источника» в этот приемник. Пожалуйста, проверьте кнопку включения группы мозаичного отображения для получения дополнительной информации.
+  #link-to-demux: 0
 
 
 
@@ -551,7 +545,7 @@ streammux:
   ##(dGPU, Boolean)Для живых источников мультиплексированный буфер должен иметь связанный NvDsFrameMeta->ntp_timestamp, установленный на системное время или время NTP сервера при потоковой передаче RTSP. 
   ## Если установлено значение 1, системная временная метка будет прикреплена как временная метка ntp.
   ## Если установлено значение 0, будет прикреплена временная метка ntp из rtspsrc, если она доступна.
-  attach-sys-ts-as-ntp: 0
+  #attach-sys-ts-as-ntp: 0
 
   ##(String) Этот ключ действителен только для нового потокового мультиплексора. Для получения дополнительной информации обратитесь к разделу руководства по плагину «Новый Gst-nvstreammux». Абсолютный или относительный (к расположению файла конфигурации DS) путь к файлу конфигурации мультиплексора.
   #config-file-path: config_mux_source30.txt
@@ -584,7 +578,7 @@ primary-gie:
   enable: 1
 
   ##(Both, Integer, >0) Уникальный идентификатор компонента, который будет присвоен экземпляру nvinfer. Используется для идентификации метаданных, созданных экземпляром.
-  gie-unique-id: 1
+  #gie-unique-id: 1
 
   ##(dGPU, Both GIEs, Integer, ≥0) Графический процессор, который будет использоваться элементом в случае нескольких графических процессоров.
   gpu-id: 0
@@ -612,31 +606,33 @@ primary-gie:
   interval: 2
 
   ## (dGPU, Jetson Both GIEs, R:G:B:A Float, 0≤R,G,B,A≤1) Цвет границ объектов определенного идентификатора класса, заданного в формате RGBA. Ключ должен иметь формат bbox-border-color<class-id>. Это свойство может быть идентифицировано несколько раз для нескольких идентификаторов классов. Если это свойство не указано для идентификатора класса, границы для объектов с этим идентификатором класса не рисуются.
-  bbox-border-color0: 1;0;0;1 #(Red for class-id 2)
+  #bbox-border-color0: 1;0;0;1 #(Red for class-id 2)
   # bbox-border-color1: 0;1;1;1
   # bbox-border-color2: 0;0;1;1
   # bbox-border-color3: 0;1;0;1
 
   ##(dGPU, Jetson Both GIEs, R:G:B:A Float, 0≤R,G,B,A≤1) Цвет прямоугольников, нарисованных над объектами определенного идентификатора класса, в формате RGBA. Ключ должен иметь формат bbox-bg-color<class-id>. Это свойство можно использовать несколько раз для нескольких идентификаторов классов. Если он не используется для идентификатора класса, поля для объектов этого идентификатора класса не рисуются.
-  bbox-bg-color0: -0;1;0;0.3 #(Semi-transparent green for class-id 0)
+  #bbox-bg-color0: -0;1;0;0.3 #(Semi-transparent green for class-id 0)
 
   ##(dGPU, Jetson Secondary GIE, Integer, >0) Уникальный идентификатор GIE, с метаданными которого (NvDsFrameMeta) этот GIE должен работать.
-  operate-on-gie-id: 1
+  #operate-on-gie-id: 1
 
   ##(dGPU, Jetson Secondary GIE, Semicolon separated integer array) Идентификаторы классов родительского GIE, на которых должен работать этот GIE. Родительский GIE указывается с использованием идентификатора операции-на-гие.
-  operate-on-class-ids: 1;2  # (работает с объектами с идентификаторами классов 1, 2, сгенерированными родительским GIE)
+  #operate-on-class-ids: 1;2  # (работает с объектами с идентификаторами классов 1, 2, сгенерированными родительским GIE)
 
   ##(dGPU, Jetson Both GIEs, String) Путь к существующему каталогу, в который можно сбросить необработанное содержимое буфера вывода в файл.
-  infer-raw-output-dir: ­/home/­ubuntu/­infer_raw_out
+  #infer-raw-output-dir: /home/ubuntu/infer_raw_out
 
   ##(dGPU, Jetson Both GIEs, String) Путь к файлу метки.
-  labelfile-path: ../../models/Primary_Detector/labels.txt
+  #labelfile-path: ../../models/Primary_Detector/labels.txt
 
-  ##(dGPU, Jetson Both GIEs, Integer, 0 or 1) Плагин для использования для вывода. 0:nvinfer (TensorRT) 1:nvinferserver (сервер вывода Triton)
+  ##(dGPU, Jetson Both GIEs, Integer, 0 or 1) Плагин для использования для вывода.  (сервер вывода Triton)
+  #0:nvinfer (TensorRT) 
+  #1:nvinferserver
   plugin-type: 0
 
   ##(dGPU, Jetson, Primary GIE, Integer, 0 or 1) Используйте предварительно обработанные входные тензоры, прикрепленные в качестве метаданных плагином nvdspreprocess, вместо предварительной обработки внутри nvinfer.
-  input-tensor-meta: 1
+  #input-tensor-meta: 1
 
 
 
