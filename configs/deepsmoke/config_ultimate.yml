@@ -12,10 +12,11 @@
 
 
 ### https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#sink-group
+### https://docs.nvidia.com/metropolis/deepstream/5.0DP/dev-guide/index.html#page/DeepStream_Development_Guide/deepstream_app_config.3.2.html#wwpID0E04B0HA
 
-## Конфигурации приложений, не связанные с конкретным компонентом.
-## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#application-group
 application:
+  ## Конфигурации приложений, не связанные с конкретным компонентом.
+  ## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#application-group
 
   ##(dGPU, Jetson, Boolean) Указывает, включено ли измерение производительности приложения.
   enable-perf-measurement: 1
@@ -43,14 +44,9 @@ application:
 
 
 
-###############################################################################
-###############################################################################
-
-
-
-## Плиточное отображение в приложении.
-## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#tiled-display-group
 tiled-display:
+  ## Плиточное отображение в приложении.
+  ## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#tiled-display-group
 
   ## (dGPU, Jetson, Integer, ) Указывает, включено ли мозаичное отображение. Когда пользователь устанавливает Enable=2, первая группа [приемника] с ключом: link-to-demux=1 должна быть связана с панелью src_[source_id] демультиплексора, где source_id — это ключ, установленный в соответствующей группе [приемника].
   # 0 = отключено, 
@@ -93,14 +89,10 @@ tiled-display:
 
 
 
-###############################################################################
-###############################################################################
-
-
-
-## Свойства источника. Источников может быть несколько. Группы должны быть названы как: [source0], [source1] …
-## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#source-group
 source0:
+  ## Свойства источника. Источников может быть несколько. Группы должны быть названы как: [source0], [source1]
+  ## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#source-group
+
   #Был в примере
   #csv-file-path: sources_1.csv
 
@@ -226,15 +218,203 @@ source0:
 
 
 
-###############################################################################
-###############################################################################
+streammux:
+  ## Плагин Gst-nvstreammux формирует пакет кадров из нескольких источников входных данных. 
+  ## Укажите свойства и измените поведение компонента streammux.
+  ## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_plugin_gst-nvstreammux.html
+  ## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#streammux-group
+
+  ##(dGPU, Integer, ≥0) GPU element is to use in case of multiple GPUs.
+  gpu-id: 0
+
+  ## (Boolean) Сообщает мультиплексору, что источники активны.
+  live-source: 0
+
+  ##(Integer, >0) Количество буферов в пуле выходных буферов мультиплексора.
+  buffer-pool-size: 4
+
+  ## (Integer, >0) Размер партии мультиплексора.
+  batch-size: 1
+
+  ## (Integer, ≥−1) Тайм-аут в микросекундах после отправки пакета после того, как будет доступен первый буфер, даже если полный пакет не сформирован.
+  batched-push-timeout: 40000
+
+  ##(Integer, >0) Выходная ширина мультиплексора в пикселях.
+  width: 1280
+
+  ##(Integer, >0) Высота вывода мультиплексора в пикселях.
+  height: 720
+
+  ##(Boolean) Указывает, следует ли сохранять исходное соотношение сторон при масштабировании путем добавления черных полос.
+  enable-padding: 0
+
+  ##(Integer, 0, 1, 2, or 3) Тип памяти CUDA, которую элемент должен выделить для выходных буферов.
+  # 0 (nvbuf-mem-default, значение по умолчанию для конкретной платформы).
+  # 1 (nvbuf-mem-cuda-pinned): закрепленная/хостовая память CUDA.
+  # 2 (nvbuf-mem-cuda-device): память CUDA устройства.
+  # 3 (nvbuf-mem-cuda-unified): унифицированная память CUDA.
+  # Для dGPU: все значения действительны.
+  # Для Jetson: допустимо только 0 (ноль).
+  nvbuf-memory-type: 0
+
+  ##(dGPU, Boolean)Для живых источников мультиплексированный буфер должен иметь связанный NvDsFrameMeta->ntp_timestamp, установленный на системное время или время NTP сервера при потоковой передаче RTSP. 
+  ## Если установлено значение 1, системная временная метка будет прикреплена как временная метка ntp.
+  ## Если установлено значение 0, будет прикреплена временная метка ntp из rtspsrc, если она доступна.
+  #attach-sys-ts-as-ntp: 0
+
+  ##(String) Этот ключ действителен только для нового потокового мультиплексора. Для получения дополнительной информации обратитесь к разделу руководства по плагину «Новый Gst-nvstreammux». Абсолютный или относительный (к расположению файла конфигурации DS) путь к файлу конфигурации мультиплексора.
+  #config-file-path: config_mux_source30.txt
+
+  ##(Boolean) Синхронизируйте входные кадры по времени перед их группировкой.
+  sync-inputs: 0 # (default 0)
+
+  ##(Integer, ≥0) Дополнительная задержка в режиме реального времени, позволяющая восходящему потоку создавать буферы для текущей позиции дольше (в наносекундах).
+  max-latency: 0 #(default 0)
+
+  ##(Boolean) Логическое свойство для управления распространением EOS в нисходящем направлении от nvstreammux, когда все площадки приемника находятся в состоянии EOS. (Экспериментальный)
+  drop-pipeline-eos: 0 #(default 0)
 
 
 
-## Укажите свойства и измените поведение компонентов приемника, которые представляют выходные данные, такие как дисплеи и файлы для рендеринга, кодирования и сохранения файлов. Конвейер может содержать несколько приемников.
-## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#sink-group
-#Группа приемников определяет свойства и изменяет поведение компонентов приемника для рендеринга, кодирования и сохранения файлов.
+primary-gie:
+  ## Укажите свойства и измените поведение первичного GIE. 
+  ## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#primary-gie-and-secondary-gie-group
+  # Свойство config-file является обязательным для любого раздела gie.
+  # Другие свойства являются необязательными, и если они установлены, они переопределяют свойства, установленные в
+  # выводной файл конфигурации.
+  # https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#id8
+
+  ##(dGPU, Jetson Both GIEs, Boolean) Указывает, должен ли быть включен основной GIE.
+  enable: 1
+
+  ##(Both, Integer, >0) Уникальный идентификатор компонента, который будет присвоен экземпляру nvinfer. Используется для идентификации метаданных, созданных экземпляром.
+  #gie-unique-id: 1
+
+  ##(dGPU, Both GIEs, Integer, ≥0) Графический процессор, который будет использоваться элементом в случае нескольких графических процессоров.
+  gpu-id: 0
+
+  ## (Both GIEs, String) Абсолютный путь к предварительно созданному сериализованному файлу ядра для режима.
+  model-engine-file: ../../models/Primary_Detector/current_model.onnx_b2_gpu0_fp16.engine
+
+  ## (dGPU, Jetson Primary GIE, Integer, 0, 1, 2, or 3) Тип элемента памяти CUDA предназначен для выделения выходных буферов.
+  # 0 (nvbuf-mem-default): значение по умолчанию, зависящее от платформы.
+  # 1 (nvbuf-mem-cuda-pinned): закрепленная/хостовая память CUDA
+  # 2 (nvbuf-mem-cuda-device): память CUDA устройства.
+  # 3 (nvbuf-mem-cuda-unified): унифицированная память CUDA.
+  # Для dGPU: все значения действительны.
+  # Для Jetson: допустимо только 0 (ноль).
+  nvbuf-memory-type: 0
+
+  ##(dGPU, Jetson Both GIEs, String) Путь к файлу конфигурации, в котором указаны свойства плагина Gst-nvinfer. Он может содержать любые свойства, описанные в этой таблице, кроме самого конфигурационного файла. Свойства должны быть определены в группе с именем [property]. Более подробную информацию о параметрах см. в разделе «Спецификации конфигурации файла Gst-nvinfer» в Руководстве по плагину DeepStream 4.0.
+  #For complete examples, see the sample file samples/configs/-deepstream-app/-config_infer_resnet.txt or the deepstream-test2 sample application.
+  config-file: config_infer_primary_desc.yml
+
+  ## (dGPU, Jetson Both GIEs, Integer, >0 Integer, >0) Количество кадров (P.GIE)/объектов (S.GIE), которые должны быть выведены вместе в пакете.
+  batch-size: 1
+
+  ##(dGPU, Jetson Primary GIE, Integer, >0 Integer, >0) Количество последовательных пакетов, которые нужно пропустить для вывода.
+  interval: 2
+
+  ## (dGPU, Jetson Both GIEs, R:G:B:A Float, 0≤R,G,B,A≤1) Цвет границ объектов определенного идентификатора класса, заданного в формате RGBA. Ключ должен иметь формат bbox-border-color<class-id>. Это свойство может быть идентифицировано несколько раз для нескольких идентификаторов классов. Если это свойство не указано для идентификатора класса, границы для объектов с этим идентификатором класса не рисуются.
+  bbox-border-color0: 1;0;0;1 #(Red for class-id 2)
+  # bbox-border-color1: 0;1;1;1
+  # bbox-border-color2: 0;0;1;1
+  # bbox-border-color3: 0;1;0;1
+
+  ##(dGPU, Jetson Both GIEs, R:G:B:A Float, 0≤R,G,B,A≤1) Цвет прямоугольников, нарисованных над объектами определенного идентификатора класса, в формате RGBA. Ключ должен иметь формат bbox-bg-color<class-id>. Это свойство можно использовать несколько раз для нескольких идентификаторов классов. Если он не используется для идентификатора класса, поля для объектов этого идентификатора класса не рисуются.
+  bbox-bg-color0: -0;1;0;0.3 #(Semi-transparent green for class-id 0)
+
+  ##(dGPU, Jetson Secondary GIE, Integer, >0) Уникальный идентификатор GIE, с метаданными которого (NvDsFrameMeta) этот GIE должен работать.
+  operate-on-gie-id: 1
+
+  ##(dGPU, Jetson Secondary GIE, Semicolon separated integer array) Идентификаторы классов родительского GIE, на которых должен работать этот GIE. Родительский GIE указывается с использованием идентификатора операции-на-гие.
+  operate-on-class-ids: 1;2  # (работает с объектами с идентификаторами классов 1, 2, сгенерированными родительским GIE)
+
+  ##(dGPU, Jetson Both GIEs, String) Путь к существующему каталогу, в который можно сбросить необработанное содержимое буфера вывода в файл.
+  #infer-raw-output-dir: /home/ubuntu/infer_raw_out
+
+  ##(dGPU, Jetson Both GIEs, String) Путь к файлу метки.
+  #labelfile-path: ../../models/Primary_Detector/labels.txt
+
+  ##(dGPU, Jetson, Primary GIE, Integer, 0 or 1) Используйте предварительно обработанные входные тензоры, прикрепленные в качестве метаданных плагином nvdspreprocess, вместо предварительной обработки внутри nvinfer.
+  #input-tensor-meta: 1
+
+  ##(dGPU, Jetson Both GIEs, Integer, 0 or 1) Плагин для использования для вывода.  (сервер вывода Triton)
+  #0:nvinfer (TensorRT) 
+  #1:nvinferserver
+  plugin-type: 0
+
+
+
+osd:
+  ## Укажите свойства и измените компонент экранного меню (OSD), который накладывает текст и прямоугольники на рамку.
+  ## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#osd-group
+  ## (Boolean) Enables or disables the On-Screen Display (OSD).
+  enable: 1
+
+  ## (Integer, ≥0) Графический процессор, который будет использоваться элементом в случае нескольких графических процессоров.
+  gpu-id: 0
+
+  ## (Integer, ≥0) Ширина границ ограничивающих рамок, нарисованных для объектов, в пикселях.
+  border-width: 1
+
+  ## (R;G;B;A Float, 0≤R,G,B,A≤1 )Цвет границ ограничивающих рамок, нарисованных для объектов.
+  #border-color: 0;0;0.7;1 #Dark Blue
+
+  ## (Integer, ≥0) Размер текста, описывающего объекты, в пунктах.
+  text-size: 15
+
+  ## (R;G;B;A Float, 0≤R,G,B,A≤1)Цвет текста, описывающего объекты, в формате RGBA.
+  text-color: 0;0;0.7;1 #Dark Blue
+
+  ## (R;G;B;A Float, 0≤R,G,B,A≤1) Цвет фона текста, описывающего объекты, в формате RGBA.
+  text-bg-color: 0;0;0;0.5 #Semi-transparent black
+
+  ## (Integer, >0) Размер текста времени на часах, в пунктах.
+  clock-text-size: 12
+
+  ## (Integer, >0) Горизонтальное смещение текста времени на часах в пикселях.
+  clock-x-offset: 100
+
+  ## (Integer, >0) Вертикальное смещение текста времени на часах в пикселях.
+  clock-y-offset: 100
+
+  ## (String) Имя шрифта текста, описывающего объекты. Введите команду оболочки fc-list, чтобы отобразить имена доступных шрифтов.
+  font: Serif
+
+  ## (R;G;B;A Float, 0≤R,G,B,A≤1) Цвет текста времени на часах в формате RGBA.
+  clock-color: 1;0;0;1 #Red
+
+  ## (Integer, 0, 1, 2, or 3) Тип памяти CUDA, которую элемент должен выделить для выходных буферов.
+  # 0 (nvbuf-mem-default): a platform-specific default
+  # 1 (nvbuf-mem-cuda-pinned): pinned/host CUDA memory
+  # 2 (nvbuf-mem-cuda-device): Device CUDA memory
+  # 3 (nvbuf-mem-cuda-unified): Unified CUDA memory
+  # For dGPU: All values are valid.
+  # For Jetson: Only 0 (zero) is valid.
+  nvbuf-memory-type: 0
+
+  ##(Integer, 0, 1, or 2) Режим обработки NvOSD.
+  # 0: CPU
+  # 1: GPU
+  process-mode: 1
+
+  ## (Boolean) Укажите, отображать ли текст
+  display-text: 1
+
+  ##(Boolean) Укажите, следует ли использовать ограничительную рамку
+  display-bbox: 0
+
+  ## (Boolean) Укажите, отображать ли маску экземпляра
+  display-mask: 1
+
+
+
 sink0:
+  ## Укажите свойства и измените поведение компонентов приемника, которые представляют выходные данные, такие как дисплеи и файлы для рендеринга, кодирования и сохранения файлов. Конвейер может содержать несколько приемников.
+  ## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#sink-group
+  #Группа приемников определяет свойства и изменяет поведение компонентов приемника для рендеринга, кодирования и сохранения файлов.
+
   ##(dGPU, Jetson, Boolean) Включает или отключает приемник.
   enable: 1
 
@@ -373,6 +553,13 @@ sink0:
   # 1: CPU software encoder
   enc-type: 0
 
+
+  ##(dGPU, Jetson, Integer, >=0) Размер буфера ядра UDP (в байтах) для внутреннего выходного конвейера RTSP.
+  #udp-buffer-size: 100000
+
+  ##(dGPU, Jetson, Boolean) Логическое значение, которое включает или отключает потоковую передачу только определенного «идентификатора источника» в этот приемник. Пожалуйста, проверьте кнопку включения группы мозаичного отображения для получения дополнительной информации.
+  #link-to-demux: 0
+
   ##(dGPU, Jetson, Integer, valid values from the column beside) Профиль кодера для кодека V4L2 H264 (HW):
   # 0: Baseline
   # 2: Main
@@ -382,266 +569,9 @@ sink0:
   # 1: Main10
   profile: 2
 
-  ##(dGPU, Jetson, Integer, >=0) Размер буфера ядра UDP (в байтах) для внутреннего выходного конвейера RTSP.
-  #udp-buffer-size: 100000
 
-  ##(dGPU, Jetson, Boolean) Логическое значение, которое включает или отключает потоковую передачу только определенного «идентификатора источника» в этот приемник. Пожалуйста, проверьте кнопку включения группы мозаичного отображения для получения дополнительной информации.
-  #link-to-demux: 0
 
-
-
-sink1:
-  enable: 0
-  type: 3
-  #1=mp4 2=mkv
-  container: 1
-  #1=h264 2=h265
-  codec: 1
-  #encoder type 0=Hardware 1=Software
-  enc-type: 0
-  sync: 0
-  #iframeinterval=10
-  bitrate: 2000000
-  #H264 Profile - 0=Baseline 2=Main 4=High
-  #H265 Profile - 0=Main 1=Main10
-  # set profile only for hw encoder, sw encoder selects profile based on sw-preset
-  profile: 0
-  output-file: out.mp4
-  source-id: 1
-
-sink2:
-  enable: 0
-  #Type - 1=FakeSink 2=EglSink 3=File 4=RTSPStreaming
-  type: 4
-  #1=h264 2=h265
-  codec: 1
-  #encoder type 0=Hardware 1=Software
-  enc-type: 0
-  sync: 0
-  bitrate: 4000000
-  #H264 Profile - 0=Baseline 2=Main 4=High
-  #H265 Profile - 0=Main 1=Main10
-  # set profile only for hw encoder, sw encoder selects profile based on sw-preset
-  profile: 0
-  # set below properties in case of RTSPStreaming
-  rtsp-port: 8554
-  udp-port: 5400
-
-
-
-###############################################################################
-###############################################################################
-
-
-
-## Укажите свойства и измените компонент экранного меню (OSD), который накладывает текст и прямоугольники на рамку.
-## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#osd-group
-osd:
-  ## (Boolean) Enables or disables the On-Screen Display (OSD).
-  enable: 1
-
-  ## (Integer, ≥0) Графический процессор, который будет использоваться элементом в случае нескольких графических процессоров.
-  gpu-id: 0
-
-  ## (Integer, ≥0) Ширина границ ограничивающих рамок, нарисованных для объектов, в пикселях.
-  border-width: 1
-
-  ## (R;G;B;A Float, 0≤R,G,B,A≤1 )Цвет границ ограничивающих рамок, нарисованных для объектов.
-  border-color: 0;0;0.7;1 #Dark Blue
-
-  ## (Integer, ≥0) Размер текста, описывающего объекты, в пунктах.
-  text-size: 15
-
-  ## (R;G;B;A Float, 0≤R,G,B,A≤1)Цвет текста, описывающего объекты, в формате RGBA.
-  text-color: 0;0;0.7;1 #Dark Blue
-
-  ## (R;G;B;A Float, 0≤R,G,B,A≤1) Цвет фона текста, описывающего объекты, в формате RGBA.
-  text-bg-color: 0;0;0;0.5 #Semi-transparent black
-
-  ## (Integer, >0) Размер текста времени на часах, в пунктах.
-  clock-text-size: 12
-
-  ## (Integer, >0) Горизонтальное смещение текста времени на часах в пикселях.
-  clock-x-offset: 100
-
-  ## (Integer, >0) Вертикальное смещение текста времени на часах в пикселях.
-  clock-y-offset: 100
-
-  ## (String) Имя шрифта текста, описывающего объекты. Введите команду оболочки fc-list, чтобы отобразить имена доступных шрифтов.
-  font: Serif
-
-  ## (R;G;B;A Float, 0≤R,G,B,A≤1) Цвет текста времени на часах в формате RGBA.
-  clock-color: 1;0;0;1 #Red
-
-  ## (Integer, 0, 1, 2, or 3) Тип памяти CUDA, которую элемент должен выделить для выходных буферов.
-  # 0 (nvbuf-mem-default): a platform-specific default
-  # 1 (nvbuf-mem-cuda-pinned): pinned/host CUDA memory
-  # 2 (nvbuf-mem-cuda-device): Device CUDA memory
-  # 3 (nvbuf-mem-cuda-unified): Unified CUDA memory
-  # For dGPU: All values are valid.
-  # For Jetson: Only 0 (zero) is valid.
-  nvbuf-memory-type: 0
-
-  ##(Integer, 0, 1, or 2) Режим обработки NvOSD.
-  # 0: CPU
-  # 1: GPU
-  process-mode: 1
-
-  ## (Boolean) Укажите, отображать ли текст
-  display-text: 1
-
-  ##(Boolean) Укажите, следует ли использовать ограничительную рамку
-  display-bbox: 0
-
-  ## (Boolean) Укажите, отображать ли маску экземпляра
-  display-mask: 1
-
-
-
-###############################################################################
-###############################################################################
-
-
-
-## Плагин Gst-nvstreammux формирует пакет кадров из нескольких источников входных данных. 
-## Укажите свойства и измените поведение компонента streammux.
-## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_plugin_gst-nvstreammux.html
-## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#streammux-group
-streammux:
-
-  ##(dGPU, Integer, ≥0) GPU element is to use in case of multiple GPUs.
-  gpu-id: 0
-
-  ## (Boolean) Сообщает мультиплексору, что источники активны.
-  live-source: 0
-
-  ##(Integer, >0) Количество буферов в пуле выходных буферов мультиплексора.
-  buffer-pool-size: 4
-
-  ## (Integer, >0) Размер партии мультиплексора.
-  batch-size: 1
-
-  ## (Integer, ≥−1) Тайм-аут в микросекундах после отправки пакета после того, как будет доступен первый буфер, даже если полный пакет не сформирован.
-  batched-push-timeout: 40000
-
-  ##(Integer, >0) Выходная ширина мультиплексора в пикселях.
-  width: 1280
-
-  ##(Integer, >0) Высота вывода мультиплексора в пикселях.
-  height: 720
-
-  ##(Boolean) Указывает, следует ли сохранять исходное соотношение сторон при масштабировании путем добавления черных полос.
-  enable-padding: 0
-
-  ##(Integer, 0, 1, 2, or 3) Тип памяти CUDA, которую элемент должен выделить для выходных буферов.
-  # 0 (nvbuf-mem-default, значение по умолчанию для конкретной платформы).
-  # 1 (nvbuf-mem-cuda-pinned): закрепленная/хостовая память CUDA.
-  # 2 (nvbuf-mem-cuda-device): память CUDA устройства.
-  # 3 (nvbuf-mem-cuda-unified): унифицированная память CUDA.
-  # Для dGPU: все значения действительны.
-  # Для Jetson: допустимо только 0 (ноль).
-  nvbuf-memory-type: 0
-
-  ##(dGPU, Boolean)Для живых источников мультиплексированный буфер должен иметь связанный NvDsFrameMeta->ntp_timestamp, установленный на системное время или время NTP сервера при потоковой передаче RTSP. 
-  ## Если установлено значение 1, системная временная метка будет прикреплена как временная метка ntp.
-  ## Если установлено значение 0, будет прикреплена временная метка ntp из rtspsrc, если она доступна.
-  #attach-sys-ts-as-ntp: 0
-
-  ##(String) Этот ключ действителен только для нового потокового мультиплексора. Для получения дополнительной информации обратитесь к разделу руководства по плагину «Новый Gst-nvstreammux». Абсолютный или относительный (к расположению файла конфигурации DS) путь к файлу конфигурации мультиплексора.
-  #config-file-path: config_mux_source30.txt
-
-  ##(Boolean) Синхронизируйте входные кадры по времени перед их группировкой.
-  sync-inputs: 0 # (default 0)
-
-  ##(Integer, ≥0) Дополнительная задержка в режиме реального времени, позволяющая восходящему потоку создавать буферы для текущей позиции дольше (в наносекундах).
-  max-latency: 0 #(default 0)
-
-  ##(Boolean) Логическое свойство для управления распространением EOS в нисходящем направлении от nvstreammux, когда все площадки приемника находятся в состоянии EOS. (Экспериментальный)
-  drop-pipeline-eos: 0 #(default 0)
-
-
-
-###############################################################################
-###############################################################################
-
-
-
-## Укажите свойства и измените поведение первичного GIE. 
-## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#primary-gie-and-secondary-gie-group
-# Свойство config-file является обязательным для любого раздела gie.
-# Другие свойства являются необязательными, и если они установлены, они переопределяют свойства, установленные в
-# выводной файл конфигурации.
-# https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#id8
-primary-gie:
-
-  ##(dGPU, Jetson Both GIEs, Boolean) Указывает, должен ли быть включен основной GIE.
-  enable: 1
-
-  ##(Both, Integer, >0) Уникальный идентификатор компонента, который будет присвоен экземпляру nvinfer. Используется для идентификации метаданных, созданных экземпляром.
-  #gie-unique-id: 1
-
-  ##(dGPU, Both GIEs, Integer, ≥0) Графический процессор, который будет использоваться элементом в случае нескольких графических процессоров.
-  gpu-id: 0
-
-  ## (Both GIEs, String) Абсолютный путь к предварительно созданному сериализованному файлу ядра для режима.
-  model-engine-file: ../../models/Primary_Detector/current_model.onnx_b2_gpu0_fp16.engine
-
-  ## (dGPU, Jetson Primary GIE, Integer, 0, 1, 2, or 3) Тип элемента памяти CUDA предназначен для выделения выходных буферов.
-  # 0 (nvbuf-mem-default): значение по умолчанию, зависящее от платформы.
-  # 1 (nvbuf-mem-cuda-pinned): закрепленная/хостовая память CUDA
-  # 2 (nvbuf-mem-cuda-device): память CUDA устройства.
-  # 3 (nvbuf-mem-cuda-unified): унифицированная память CUDA.
-  # Для dGPU: все значения действительны.
-  # Для Jetson: допустимо только 0 (ноль).
-  nvbuf-memory-type: 0
-
-  ##(dGPU, Jetson Both GIEs, String) Путь к файлу конфигурации, в котором указаны свойства плагина Gst-nvinfer. Он может содержать любые свойства, описанные в этой таблице, кроме самого конфигурационного файла. Свойства должны быть определены в группе с именем [property]. Более подробную информацию о параметрах см. в разделе «Спецификации конфигурации файла Gst-nvinfer» в Руководстве по плагину DeepStream 4.0.
-  #For complete examples, see the sample file samples/configs/-deepstream-app/-config_infer_resnet.txt or the deepstream-test2 sample application.
-  config-file: config_infer_primary_desc.yml
-
-  ## (dGPU, Jetson Both GIEs, Integer, >0 Integer, >0) Количество кадров (P.GIE)/объектов (S.GIE), которые должны быть выведены вместе в пакете.
-  batch-size: 1
-
-  ##(dGPU, Jetson Primary GIE, Integer, >0 Integer, >0) Количество последовательных пакетов, которые нужно пропустить для вывода.
-  interval: 2
-
-  ## (dGPU, Jetson Both GIEs, R:G:B:A Float, 0≤R,G,B,A≤1) Цвет границ объектов определенного идентификатора класса, заданного в формате RGBA. Ключ должен иметь формат bbox-border-color<class-id>. Это свойство может быть идентифицировано несколько раз для нескольких идентификаторов классов. Если это свойство не указано для идентификатора класса, границы для объектов с этим идентификатором класса не рисуются.
-  bbox-border-color0: 1;0;0;1 #(Red for class-id 2)
-  # bbox-border-color1: 0;1;1;1
-  # bbox-border-color2: 0;0;1;1
-  # bbox-border-color3: 0;1;0;1
-
-  ##(dGPU, Jetson Both GIEs, R:G:B:A Float, 0≤R,G,B,A≤1) Цвет прямоугольников, нарисованных над объектами определенного идентификатора класса, в формате RGBA. Ключ должен иметь формат bbox-bg-color<class-id>. Это свойство можно использовать несколько раз для нескольких идентификаторов классов. Если он не используется для идентификатора класса, поля для объектов этого идентификатора класса не рисуются.
-  bbox-bg-color0: -0;1;0;0.3 #(Semi-transparent green for class-id 0)
-
-  ##(dGPU, Jetson Secondary GIE, Integer, >0) Уникальный идентификатор GIE, с метаданными которого (NvDsFrameMeta) этот GIE должен работать.
-  operate-on-gie-id: 1
-
-  ##(dGPU, Jetson Secondary GIE, Semicolon separated integer array) Идентификаторы классов родительского GIE, на которых должен работать этот GIE. Родительский GIE указывается с использованием идентификатора операции-на-гие.
-  operate-on-class-ids: 1;2  # (работает с объектами с идентификаторами классов 1, 2, сгенерированными родительским GIE)
-
-  ##(dGPU, Jetson Both GIEs, String) Путь к существующему каталогу, в который можно сбросить необработанное содержимое буфера вывода в файл.
-  #infer-raw-output-dir: /home/ubuntu/infer_raw_out
-
-  ##(dGPU, Jetson Both GIEs, String) Путь к файлу метки.
-  #labelfile-path: ../../models/Primary_Detector/labels.txt
-
-  ##(dGPU, Jetson Both GIEs, Integer, 0 or 1) Плагин для использования для вывода.  (сервер вывода Triton)
-  #0:nvinfer (TensorRT) 
-  #1:nvinferserver
-  plugin-type: 0
-
-  ##(dGPU, Jetson, Primary GIE, Integer, 0 or 1) Используйте предварительно обработанные входные тензоры, прикрепленные в качестве метаданных плагином nvdspreprocess, вместо предварительной обработки внутри nvinfer.
-  #input-tensor-meta: 1
-
-
-
-###############################################################################
-###############################################################################
-
-
-
-## Диагностика и отладка. Эта группа является экспериментальной.
-## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#tests-group
 tests:
+  ## Диагностика и отладка. Эта группа является экспериментальной.
+  ## https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_ref_app_deepstream.html#tests-group
   file-loop: 0
