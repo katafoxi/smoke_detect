@@ -1,0 +1,3 @@
+enable,type,uri,num-sources,gpu-id,cudadec-memtype
+1,3,file://../../streams/OutputVideo1920p_yuv420p.mp4,1,0,0
+1,3,file://../../streams/OutputVideo1920p_yuv420p.mp4,1,0,0
