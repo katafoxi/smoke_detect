@@ -1,14 +1,3 @@
-####################################################################################################
-# SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-#
-# NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
-# property and proprietary rights in and to this material, related
-# documentation and any modifications thereto. Any use, reproduction,
-# disclosure or distribution of this material and related documentation
-# without an express license agreement from NVIDIA CORPORATION or
-# its affiliates is strictly prohibited.
-####################################################################################################
 
 #ABBREVIATURES
 #GIE - GPU Inference Engine Механизм вывода графического процессора
@@ -76,7 +65,7 @@ property:
   # 3: Instance Segmentation
   network-type: 2
 
-  ##(All, Both, Integer, >0) Уникальный идентификатор, который будет присвоен GIE, чтобы приложение и другие элементы могли идентифицировать обнаруженные ограничивающие рамки и метки.
+  ##**(All, Both, Integer, >0) Уникальный идентификатор, который будет присвоен GIE, чтобы приложение и другие элементы могли идентифицировать обнаруженные ограничивающие рамки и метки.
   gie-unique-id: 1
 
   ##(All, Both, Integer, >0) Уникальный идентификатор GIE, с метаданными которого (ограничивающими рамками) этот GIE должен работать.
@@ -112,7 +101,7 @@ property:
   # 0:RGB, 
   # 1:BGR, 
   # 2:GRAY
-  model-color-format: 0
+  model-color-format: 1
 
 
   ##(All, Both, Integer) Порядок входного слоя сети (игнорируется, если включен input-tensor-meta)
@@ -121,10 +110,10 @@ property:
   network-input-order: 0
 
   ##(All, Both, Integer, >0) Количество кадров или объектов, которые будут выводиться вместе в пакете
-  batch-size: 1
+  batch-size: 2
 
   ##(All, Primary, Integer, >0) Указывает количество последовательных пакетов, которые будут пропущены для вывода.
-  interval: 5
+  interval: 3
 
   ##(All, Both, Boolean) Если сеть поддерживает как неявное пакетное измерение, так и полное измерение, принудительно включите режим неявного пакетного измерения.
   #force-implicit-batch-dim: 1
@@ -135,7 +124,8 @@ property:
   infer-dims: 3;512;512
 
   ##*(All, Both, Float, >0.0) Коэффициент нормализации пикселей (игнорируется, если включен входной тензорный мета)
-  net-scale-factor: 0.003921568627451
+  #net-scale-factor: 0.003921568627451
+  net-scale-factor: 1
 
   ##(All, Both, Semicolon delimited float array, all values ≥0) Массив средних значений компонентов цвета, которые необходимо вычесть из каждого пикселя. Длина массива должна равняться количеству цветовых компонентов в кадре. Плагин умножает средние значения на коэффициент чистого масштабирования. (игнорируется, если включен входной тензорный мета)
   #offsets=77.5;21.2;11.8
@@ -143,16 +133,16 @@ property:
   offsets: 120.0;122.7;119.6
 
   ##(All, Both, Boolean) Указывает, следует ли сохранять соотношение сторон при масштабировании ввода.
-  maintain-aspect-ratio: 1
+  #maintain-aspect-ratio: 1
 
   ##(All, Both, Boolean) Указывает, следует ли дополнять изображение симметрично при масштабировании ввода. По умолчанию DeepStream дополняет изображения асимметрично.
-  symmetric-padding: 1
+  #symmetric-padding: 1
 
   ##(All, Primary, Boolean) Используйте предварительно обработанные входные тензоры, прикрепленные как метаданные, вместо предварительной обработки внутри плагина. Если этот параметр установлен, убедитесь, что размер пакета nvinfer равен сумме ROI, установленных в файле конфигурации плагина gst-nvdspreprocess.
   #input-tensor-from-meta: 1
 
   ##(All, Both, Integer, действительные значения см. в перечислении NvBufSurfTransform_Inter в nvbufsurftransform.h.) Фильтр, используемый для масштабирования кадров/обрезок объектов до сетевого разрешения (игнорируется, если включен input-tensor-meta).
-  scaling-filter: 1
+  #scaling-filter: 1
 
 
 
@@ -160,7 +150,8 @@ property:
   #_________________________ MODEL COMMON PATH AND LIBS
   #############################################################################
   ##(All, Both, String) Путь к файлу модели ONNX
-  onnx-file: ../models/Primary_Detector/current_model_softmax.onnx
+  onnx-file: ../models/fire_base.onnx
+  #onnx-file: ../models/fire_softmax.onnx
 
   ##(All, Both, String) Путь к модели, закодированной набором инструментов TAO.
   #tlt-encoded-model: /home/ubuntu/model.etlt
@@ -169,7 +160,9 @@ property:
   #tlt-model-key: abc
 
   ##(All, Both, String) Путь к файлу механизма сериализованной модели
-  model-engine-file: ../models/Primary_Detector/current_model_softmax.onnx_b2_gpu0_fp16.engine
+  model-engine-file: ../models/fire_base.onnx_b2_gpu0_fp16.engine
+  #model-engine-file: ../models/fire_softmax.onnx_b2_gpu0_fp16.engine
+
 
   ##(All, Both, String) Имя пользовательской функции создания TensorRT CudaEngine. Подробности см. в разделе «Интерфейс реализации пользовательской модели».
   #engine-create-func-name: NvDsInferYoloCudaEngineGet
@@ -194,7 +187,7 @@ property:
   #  1:INT8, 
   #  2:FP16, 
   #  3:BEST
-  network-mode: 0
+  network-mode: 2
 
   ##(All, Both, String) Путь к калибровочному файлу INT8 для регулировки динамического диапазона модели FP32.
   #int8-calib-file: /home/ubuntu/int8_calib
@@ -294,7 +287,7 @@ property:
   #secondary-reinfer-interval: 15
   
   ##(Detector & classifier, Both, String) Путь к текстовому файлу, содержащему метки модели.
-  #labelfile-path: /home/ubuntu/model_labels.txt
+  labelfile-path: ../models/labels_smoke.txt
 
 
   ###############################################################################
@@ -302,7 +295,7 @@ property:
   ###############################################################################
   # example https://github.com/NVIDIA-AI-IOT/deepstream_python_apps/blob/master/apps/deepstream-segmentation/dstest_segmentation_config_industrial.txt
   ##**(Segmentation, Instance segmentation, Both, Float, ≥0.0) Порог уверенности для модели сегментации для вывода допустимого класса для пикселя. Если достоверность меньше этого порога, выходные данные класса для этого пикселя равны -1.
-  segmentation-threshold: 0.5
+  segmentation-threshold: 0.1
 
   ##(Segmentation, Both, Integer, ) Порядок выходного слоя сети сегментации
   # https://oneapi-src.github.io/oneDNN/dev_guide_understanding_memory_formats.html
@@ -311,7 +304,7 @@ property:
   #segmentation-output-order: 0
 
   ##(Instance Segmentation, Primary, String) Имя пользовательской функции анализа сегментации экземпляра. Это обязательно, например, сеть сегментации, поскольку здесь нет внутренней функции.
-  parse-bbox-instance-mask-func-name: NvDsInferParseCustomMrcnnTLT
+  #parse-bbox-instance-mask-func-name: NvDsInferParseCustomMrcnnTLT
 
   ##(Instance Segmentation, Primary, Boolean) Gst-nvinfer присоединяет выходные данные маски экземпляра к метаданным объекта.
   output-instance-mask: 1
