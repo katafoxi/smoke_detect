@@ -41,8 +41,7 @@
 static gboolean PERF_MODE = FALSE;
 
 /* tiler_sink_pad_buffer_probe  will extract metadata received on 
-   segmentation
- *  src pad */
+   segmentation  src pad */
 static GstPadProbeReturn
 tiler_src_pad_buffer_probe (
   GstPad * pad,
@@ -255,7 +254,7 @@ main (int argc, char *argv[])
     *tiler = NULL;
   GstBus *bus = NULL;
   guint bus_watch_id;
-  GstPad *seg_src_pad = NULL;
+  GstPad *tiler_src_pad = NULL;
   guint i, num_sources = 0;
   guint tiler_rows, tiler_columns;
   guint pgie_batch_size;
@@ -448,14 +447,14 @@ main (int argc, char *argv[])
   /* Lets add probe to get informed of the meta data generated, we add probe to
    * the sink pad of the osd element, since by that time, the buffer would have
    * had got all the metadata. */
-  seg_src_pad = gst_element_get_static_pad (pgie, "src");
-  if (!seg_src_pad)
+  tiler_src_pad = gst_element_get_static_pad (pgie, "src");
+  if (!tiler_src_pad)
     g_print ("Unable to get src pad\n");
   else
     gst_pad_add_probe (
-      seg_src_pad, GST_PAD_PROBE_TYPE_BUFFER,
+      tiler_src_pad, GST_PAD_PROBE_TYPE_BUFFER,
       tiler_src_pad_buffer_probe, NULL, NULL);
-  gst_object_unref (seg_src_pad);
+  gst_object_unref (tiler_src_pad);
 
   /* Set the pipeline to "playing" state */
   g_print ("Now playing...\n");
