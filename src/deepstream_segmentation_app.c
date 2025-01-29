@@ -313,7 +313,7 @@ main (int argc, char *argv[])
   for (i = 0; i < num_sources; i++) {
     GstPad *sinkpad, *srcpad;
     gchar pad_name[16] = { };
-    GstElement *source_bin;
+    GstElement *source_bin = NULL;
 
     if (is_nvinfer_server) {
       source_bin = create_source_bin(i, argv[i + 4]);
