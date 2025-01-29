@@ -38,13 +38,16 @@
 
 #define NVINFER_PLUGIN "nvinfer"
 #define NVINFERSERVER_PLUGIN "nvinferserver"
+static gboolean PERF_MODE = FALSE;
 
-/* tiler_sink_pad_buffer_probe  will extract metadata received on segmentation
+/* tiler_sink_pad_buffer_probe  will extract metadata received on 
+   segmentation
  *  src pad */
 static GstPadProbeReturn
-tiler_src_pad_buffer_probe (GstPad * pad, GstPadProbeInfo * info,
-    gpointer u_data)
-{
+tiler_src_pad_buffer_probe (
+  GstPad * pad,
+  GstPadProbeInfo * info,
+  gpointer u_data) {
     GstBuffer *buf = (GstBuffer *) info->data;
     NvDsMetaList * l_frame = NULL;
     NvDsBatchMeta *batch_meta = gst_buffer_get_nvds_batch_meta (buf);
@@ -110,7 +113,10 @@ bus_call (GstBus * bus, GstMessage * msg, gpointer data)
 }
 
 static void 
-on_pad_added (GstElement * element, GstPad *pad, gpointer data)
+on_pad_added (
+  GstElement * element, 
+  GstPad *pad, 
+  gpointer data)
 {
   GstPad *sinkpad;
   GstElement *jpegparse = (GstElement *) data;
@@ -127,7 +133,11 @@ on_pad_added (GstElement * element, GstPad *pad, gpointer data)
 static GstElement *
 create_source_bin (guint index, gchar * uri)
 {
-  GstElement *bin = NULL, *uri_decode_bin = NULL;
+  GstElement 
+    *bin = NULL, 
+    *uri_decode_bin = NULL,
+    *h264parser, 
+    *decoder;
   gchar bin_name[16] = { };
 
   int current_device = -1;
@@ -140,9 +150,7 @@ create_source_bin (guint index, gchar * uri)
    * pipeline */
   bin = gst_bin_new (bin_name);
 
-  GstElement *h264parser, *decoder;
-
-  uri_decode_bin = gst_element_factory_make ("nvurisrcbin", "uri_decode_bin");
+  uri_decode_bin = gst_element_factory_make ("nvurisrcbin", "uri-decode-bin");
 
   // h264parser = gst_element_factory_make ("jpegparse", "jpeg-parser");
   h264parser = gst_element_factory_make ("h264parse", "h264-parser");
@@ -154,12 +162,14 @@ create_source_bin (guint index, gchar * uri)
     g_printerr ("One element could not be created. Exiting.\n");
     return NULL;
   }
-  g_object_set (G_OBJECT (uri_decode_bin), "location", uri, NULL);
+  g_object_set (G_OBJECT (uri_decode_bin), 
+    "location", uri, NULL);
   const char *dot = strrchr(uri, '.');
   if (!strcmp (dot+1, "mp4"))
   {
     if(prop.integrated) {
-      g_object_set (G_OBJECT (decoder), "mjpeg", 1, NULL);
+      g_object_set (G_OBJECT (decoder), 
+        "mjpeg", 1, NULL);
     }
 
     GstElement *qtdemux = gst_element_factory_make ("qtdemux", "qt-demux");
@@ -169,24 +179,35 @@ create_source_bin (guint index, gchar * uri)
       return NULL;
     }
 
-    gst_bin_add_many (GST_BIN(bin), uri_decode_bin, qtdemux, NULL);
-    gst_element_link_many (uri_decode_bin, qtdemux, NULL);
-    gst_bin_add_many (GST_BIN(bin), h264parser, decoder, NULL);
-    gst_element_link_many (h264parser, decoder, NULL);
+    gst_bin_add_many (GST_BIN(bin), 
+      uri_decode_bin, 
+      qtdemux, NULL);
+    gst_element_link_many (
+      uri_decode_bin, 
+      qtdemux, NULL);
+
+    gst_bin_add_many (GST_BIN(bin), 
+      h264parser, 
+      decoder, NULL);
+    gst_element_link_many (
+      h264parser, 
+      decoder, NULL);
 
     g_signal_connect (qtdemux, "pad-added", G_CALLBACK (on_pad_added), h264parser);
   }
   else {
-    gst_bin_add_many (GST_BIN (bin), uri_decode_bin, h264parser, decoder, NULL);
-    gst_element_link_many (uri_decode_bin, h264parser, decoder, NULL);
+    gst_bin_add_many (GST_BIN (bin), 
+      uri_decode_bin, 
+      h264parser, 
+      decoder, NULL);
+    
+    gst_element_link_many (
+      uri_decode_bin,
+      h264parser, 
+      decoder, NULL);
   }
 
 
-  /* jНам нужно создать призрак для исходного корзина, который будет действовать как прокси -сервер
-   *Для видеородера SRC Pad. Призрачная площадка не будет иметь правильной цели
-   *сейчас. После того, как бин декодирования создает видеокодер видео и генерирует
-   *CB_NEWPAD обратный вызов, мы установим цель призрачной падки на видео декодер
-   *SRC Pad. */
   
   /* We need to create a ghost pad for the source bin which will act as a proxy
    * for the video decoder src pad. The ghost pad will not have a target right
@@ -246,7 +267,9 @@ main (int argc, char *argv[])
   struct cudaDeviceProp prop;
   cudaGetDeviceProperties(&prop, current_device);
 
+  //===========================================================================
   /* Check input arguments */
+  //===========================================================================
   if (argc < 3) {
     usage(argv[0]);
     return -1;
@@ -276,7 +299,7 @@ main (int argc, char *argv[])
 
   /* Create gstreamer elements */
   /* Create Pipeline element that will form a connection of other elements */
-  pipeline = gst_pipeline_new ("dstest-image-decode-pipeline");
+  pipeline = gst_pipeline_new ("smoke-segmentation-pipeline");
 
   /* Create nvstreammux instance to form batches from one or more sources. */
   streammux = gst_element_factory_make ("nvstreammux", "stream-muxer");
@@ -285,12 +308,14 @@ main (int argc, char *argv[])
     g_printerr ("One element could not be created. Exiting.\n");
     return -1;
   }
+
   gst_bin_add (GST_BIN (pipeline), streammux);
 
   for (i = 0; i < num_sources; i++) {
     GstPad *sinkpad, *srcpad;
     gchar pad_name[16] = { };
     GstElement *source_bin;
+
     if (is_nvinfer_server) {
       source_bin = create_source_bin(i, argv[i + 4]);
     } else {
@@ -341,12 +366,12 @@ main (int argc, char *argv[])
   nvvidconv = gst_element_factory_make ("nvvideoconvert", "nvvideo-converter");
   if(prop.integrated)  {
     sink = gst_element_factory_make ("nv3dsink", "nvvideo-renderer");
-    } else {
-#ifdef __aarch64__
-    sink = gst_element_factory_make ("nv3dsink", "nvvideo-renderer");
-#else
-    sink = gst_element_factory_make ("nveglglessink", "nvvideo-renderer");
-#endif
+  } else {
+      #ifdef __aarch64__
+        sink = gst_element_factory_make ("nv3dsink", "nvvideo-renderer");
+      #else
+        sink = gst_element_factory_make ("nveglglessink", "nvvideo-renderer");
+      #endif
   }
 
   if (!nvvidconv || !pgie || !nvsegvisual || !tiler || !sink) {
@@ -402,17 +427,24 @@ main (int argc, char *argv[])
   /* Set up the pipeline */
   /* Add all elements into the pipeline */
   gst_bin_add_many (GST_BIN (pipeline), 
-    nvvidconv, pgie, nvsegvisual, tiler, sink, NULL);
+    nvvidconv, 
+    pgie, 
+    nvsegvisual, 
+    tiler, 
+    sink, NULL);
   /* Link the elements together
   * nvstreammux -> nvvideoconv -> nvinfer -> nvsegvisual -> nvtiler -> video-renderer */
-  if (!gst_element_link_many (streammux, nvvidconv, pgie, nvsegvisual, tiler, sink, NULL)) {
+  if (!gst_element_link_many (
+    streammux, 
+    nvvidconv, 
+    pgie, 
+    nvsegvisual, 
+    tiler, 
+    sink, NULL)) {
     g_printerr ("Elements could not be linked. Exiting.\n");
     return -1;
   }
 
-  /* Давайте добавим зонд, чтобы получать информацию о сгенерированных метаданных. Мы добавим зонд в
-   *src-панель элемента nvseg, так как к тому времени буфер уже будет
-   * получили все метаданные сегментации. */
   /* Lets add probe to get informed of the meta data generated, we add probe to
    * the sink pad of the osd element, since by that time, the buffer would have
    * had got all the metadata. */
@@ -420,20 +452,19 @@ main (int argc, char *argv[])
   if (!seg_src_pad)
     g_print ("Unable to get src pad\n");
   else
-    gst_pad_add_probe (seg_src_pad, GST_PAD_PROBE_TYPE_BUFFER,
-        tiler_src_pad_buffer_probe, NULL, NULL);
+    gst_pad_add_probe (
+      seg_src_pad, GST_PAD_PROBE_TYPE_BUFFER,
+      tiler_src_pad_buffer_probe, NULL, NULL);
   gst_object_unref (seg_src_pad);
 
-  /* Установите трубопровод на «игра» */
+  /* Set the pipeline to "playing" state */
   g_print ("Now playing...\n");
   gst_element_set_state (pipeline, GST_STATE_PLAYING);
 
-  /* Подождите, пока конвейер не обнаружит ошибку или EOS. */
   /* Wait till pipeline encounters an error or EOS */
   g_print ("Running...\n");
   g_main_loop_run (loop);
 
-  /* Из главной петли, хорошо очиститься */
   /* Out of the main loop, clean up nicely */
   g_print ("Returned, stopping playback\n");
   gst_element_set_state (pipeline, GST_STATE_NULL);
