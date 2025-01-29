@@ -229,7 +229,7 @@ main (int argc, char *argv[])
     *streammux = NULL, 
     *sink = NULL, 
     *nvvidconv = NULL, 
-    *seg = NULL,
+    *pgie = NULL,
     *nvsegvisual = NULL, 
     *tiler = NULL;
   GstBus *bus = NULL;
@@ -330,7 +330,7 @@ main (int argc, char *argv[])
   nvvidconv = gst_element_factory_make ("nvvideoconvert", "nvvideo-converter");
 
   /* Use nvinfer to infer on batched frame. */
-  seg = gst_element_factory_make (
+  pgie = gst_element_factory_make (
           is_nvinfer_server ? NVINFERSERVER_PLUGIN : NVINFER_PLUGIN,
           "primary-nvinference-engine");
 
@@ -350,7 +350,7 @@ main (int argc, char *argv[])
 #endif
   }
 
-  if (!nvvidconv || !seg || !nvsegvisual || !tiler || !sink) {
+  if (!nvvidconv || !pgie || !nvsegvisual || !tiler || !sink) {
     g_printerr ("One element could not be created. Exiting.\n");
     return -1;
   }
@@ -364,17 +364,17 @@ main (int argc, char *argv[])
     "batched-push-timeout", MUXER_BATCH_TIMEOUT_USEC, NULL);
 
   /* Configure the nvinfer element using the nvinfer config file. */
-  g_object_set (G_OBJECT (seg), 
+  g_object_set (G_OBJECT (pgie), 
     "config-file-path", infer_config_file, NULL);
 
   /* Override the batch-size set in the config file with the number of sources. */
-  g_object_get (G_OBJECT (seg), 
+  g_object_get (G_OBJECT (pgie), 
     "batch-size", &pgie_batch_size, NULL);
   if (pgie_batch_size != num_sources && !is_nvinfer_server) {
     g_printerr
       ("WARNING: Overriding infer-config batch-size (%d) with number of sources (%d)\n",
       pgie_batch_size, num_sources);
-    g_object_set (G_OBJECT (seg), 
+    g_object_set (G_OBJECT (pgie), 
       "batch-size", num_sources, NULL);
   }
 
@@ -403,10 +403,10 @@ main (int argc, char *argv[])
   /* Set up the pipeline */
   /* Add all elements into the pipeline */
   gst_bin_add_many (GST_BIN (pipeline), 
-    nvvidconv, seg, nvsegvisual, tiler, sink, NULL);
+    nvvidconv, pgie, nvsegvisual, tiler, sink, NULL);
   /* Link the elements together
   * nvstreammux -> nvvideoconv -> nvinfer -> nvsegvisual -> nvtiler -> video-renderer */
-  if (!gst_element_link_many (streammux, nvvidconv, seg, nvsegvisual, tiler, sink, NULL)) {
+  if (!gst_element_link_many (streammux, nvvidconv, pgie, nvsegvisual, tiler, sink, NULL)) {
     g_printerr ("Elements could not be linked. Exiting.\n");
     return -1;
   }
@@ -417,7 +417,7 @@ main (int argc, char *argv[])
   /* Lets add probe to get informed of the meta data generated, we add probe to
    * the sink pad of the osd element, since by that time, the buffer would have
    * had got all the metadata. */
-  seg_src_pad = gst_element_get_static_pad (seg, "src");
+  seg_src_pad = gst_element_get_static_pad (pgie, "src");
   if (!seg_src_pad)
     g_print ("Unable to get src pad\n");
   else
