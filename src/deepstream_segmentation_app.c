@@ -110,7 +110,7 @@ bus_call (GstBus * bus, GstMessage * msg, gpointer data)
 }
 
 static void 
-on_pad_added (GstElement *element, GstPad *pad, gpointer data)
+on_pad_added (GstElement * element, GstPad *pad, gpointer data)
 {
   GstPad *sinkpad;
   GstElement *jpegparse = (GstElement *) data;
@@ -140,21 +140,21 @@ create_source_bin (guint index, gchar * uri)
    * pipeline */
   bin = gst_bin_new (bin_name);
 
-  GstElement *source, *h264parser, *decoder;
+  GstElement *h264parser, *decoder;
 
-  source = gst_element_factory_make ("filesrc", "source");
+  uri_decode_bin = gst_element_factory_make ("nvurisrcbin", "uri_decode_bin");
 
   // h264parser = gst_element_factory_make ("jpegparse", "jpeg-parser");
   h264parser = gst_element_factory_make ("h264parse", "h264-parser");
 
   decoder = gst_element_factory_make ("nvv4l2decoder", "nvv4l2-decoder");
 
-  if (!source || !h264parser || !decoder)
+  if (!uri_decode_bin || !h264parser || !decoder)
   {
     g_printerr ("One element could not be created. Exiting.\n");
     return NULL;
   }
-  g_object_set (G_OBJECT (source), "location", uri, NULL);
+  g_object_set (G_OBJECT (uri_decode_bin), "location", uri, NULL);
   const char *dot = strrchr(uri, '.');
   if (!strcmp (dot+1, "mp4"))
   {
@@ -169,16 +169,16 @@ create_source_bin (guint index, gchar * uri)
       return NULL;
     }
 
-    gst_bin_add_many (GST_BIN(bin), source, qtdemux, NULL);
-    gst_element_link_many (source, qtdemux, NULL);
+    gst_bin_add_many (GST_BIN(bin), uri_decode_bin, qtdemux, NULL);
+    gst_element_link_many (uri_decode_bin, qtdemux, NULL);
     gst_bin_add_many (GST_BIN(bin), h264parser, decoder, NULL);
     gst_element_link_many (h264parser, decoder, NULL);
 
     g_signal_connect (qtdemux, "pad-added", G_CALLBACK (on_pad_added), h264parser);
   }
   else {
-    gst_bin_add_many (GST_BIN (bin), source, h264parser, decoder, NULL);
-    gst_element_link_many (source, h264parser, decoder, NULL);
+    gst_bin_add_many (GST_BIN (bin), uri_decode_bin, h264parser, decoder, NULL);
+    gst_element_link_many (uri_decode_bin, h264parser, decoder, NULL);
   }
 
 
@@ -325,9 +325,6 @@ main (int argc, char *argv[])
     gst_object_unref (sinkpad);
   }
 
-  /* Use convertor to convert to appropriate format */
-  /* https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_plugin_gst-nvvideoconvert.html */
-  nvvidconv = gst_element_factory_make ("nvvideoconvert", "nvvideo-converter");
 
   /* Use nvinfer to infer on batched frame. */
   pgie = gst_element_factory_make (
@@ -340,6 +337,8 @@ main (int argc, char *argv[])
    * on the source of the frames. */
   tiler = gst_element_factory_make ("nvmultistreamtiler", "nvtiler");
 
+  /* Use convertor to convert to appropriate format */
+  nvvidconv = gst_element_factory_make ("nvvideoconvert", "nvvideo-converter");
   if(prop.integrated)  {
     sink = gst_element_factory_make ("nv3dsink", "nvvideo-renderer");
     } else {
