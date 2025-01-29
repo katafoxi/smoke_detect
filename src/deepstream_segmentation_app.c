@@ -20,6 +20,7 @@
 #include <cuda_runtime_api.h>
 
 #include "gstnvdsmeta.h"
+#include "nvds_yml_parser.h"
 #include "gst-nvmessage.h"
 
 /* The muxer output resolution must be set if the input streams will be of
@@ -108,7 +109,8 @@ bus_call (GstBus * bus, GstMessage * msg, gpointer data)
   return TRUE;
 }
 
-static void on_pad_added (GstElement *element, GstPad *pad, gpointer data)
+static void 
+on_pad_added (GstElement *element, GstPad *pad, gpointer data)
 {
   GstPad *sinkpad;
   GstElement *jpegparse = (GstElement *) data;
@@ -125,7 +127,7 @@ static void on_pad_added (GstElement *element, GstPad *pad, gpointer data)
 static GstElement *
 create_source_bin (guint index, gchar * uri)
 {
-  GstElement *bin = NULL;
+  GstElement *bin = NULL, *uri_decode_bin = NULL;
   gchar bin_name[16] = { };
 
   int current_device = -1;
@@ -179,6 +181,13 @@ create_source_bin (guint index, gchar * uri)
     gst_element_link_many (source, h264parser, decoder, NULL);
   }
 
+
+  /* jНам нужно создать призрак для исходного корзина, который будет действовать как прокси -сервер
+   *Для видеородера SRC Pad. Призрачная площадка не будет иметь правильной цели
+   *сейчас. После того, как бин декодирования создает видеокодер видео и генерирует
+   *CB_NEWPAD обратный вызов, мы установим цель призрачной падки на видео декодер
+   *SRC Pad. */
+  
   /* We need to create a ghost pad for the source bin which will act as a proxy
    * for the video decoder src pad. The ghost pad will not have a target right
    * now. Once the decode bin creates the video decoder and generates the
@@ -215,8 +224,14 @@ int
 main (int argc, char *argv[])
 {
   GMainLoop *loop = NULL;
-  GstElement *pipeline = NULL, *streammux = NULL, *sink = NULL, *nvvidconv = NULL, *seg = NULL,
-             *nvsegvisual = NULL, *tiler = NULL;
+  GstElement  
+    *pipeline = NULL, 
+    *streammux = NULL, 
+    *sink = NULL, 
+    *nvvidconv = NULL, 
+    *seg = NULL,
+    *nvsegvisual = NULL, 
+    *tiler = NULL;
   GstBus *bus = NULL;
   guint bus_watch_id;
   GstPad *seg_src_pad = NULL;
@@ -274,15 +289,13 @@ main (int argc, char *argv[])
 
   for (i = 0; i < num_sources; i++) {
     GstPad *sinkpad, *srcpad;
-    GstElement *source_bin;
     gchar pad_name[16] = { };
-
+    GstElement *source_bin;
     if (is_nvinfer_server) {
       source_bin = create_source_bin(i, argv[i + 4]);
     } else {
       source_bin = create_source_bin(i, argv[i + 2]);
     }
-
     if (!source_bin) {
       g_printerr ("Failed to create source bin. Exiting.\n");
       return -1;
@@ -313,6 +326,7 @@ main (int argc, char *argv[])
   }
 
   /* Use convertor to convert to appropriate format */
+  /* https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_plugin_gst-nvvideoconvert.html */
   nvvidconv = gst_element_factory_make ("nvvideoconvert", "nvvideo-converter");
 
   /* Use nvinfer to infer on batched frame. */
@@ -326,9 +340,9 @@ main (int argc, char *argv[])
    * on the source of the frames. */
   tiler = gst_element_factory_make ("nvmultistreamtiler", "nvtiler");
 
-  if(prop.integrated) {
+  if(prop.integrated)  {
     sink = gst_element_factory_make ("nv3dsink", "nvvideo-renderer");
-  } else {
+    } else {
 #ifdef __aarch64__
     sink = gst_element_factory_make ("nv3dsink", "nvvideo-renderer");
 #else
@@ -341,35 +355,45 @@ main (int argc, char *argv[])
     return -1;
   }
 
-  g_object_set (G_OBJECT (streammux), "batch-size", num_sources, NULL);
+  g_object_set (G_OBJECT (streammux), 
+    "batch-size", num_sources, NULL);
 
-  g_object_set (G_OBJECT (streammux), "width", MUXER_OUTPUT_WIDTH, "height",
-      MUXER_OUTPUT_HEIGHT,
-      "batched-push-timeout", MUXER_BATCH_TIMEOUT_USEC, NULL);
+  g_object_set (G_OBJECT (streammux), 
+    "width", MUXER_OUTPUT_WIDTH, 
+    "height", MUXER_OUTPUT_HEIGHT,
+    "batched-push-timeout", MUXER_BATCH_TIMEOUT_USEC, NULL);
 
   /* Configure the nvinfer element using the nvinfer config file. */
-  g_object_set (G_OBJECT (seg), "config-file-path", infer_config_file, NULL);
+  g_object_set (G_OBJECT (seg), 
+    "config-file-path", infer_config_file, NULL);
 
   /* Override the batch-size set in the config file with the number of sources. */
-  g_object_get (G_OBJECT (seg), "batch-size", &pgie_batch_size, NULL);
+  g_object_get (G_OBJECT (seg), 
+    "batch-size", &pgie_batch_size, NULL);
   if (pgie_batch_size != num_sources && !is_nvinfer_server) {
     g_printerr
-        ("WARNING: Overriding infer-config batch-size (%d) with number of sources (%d)\n",
-        pgie_batch_size, num_sources);
-    g_object_set (G_OBJECT (seg), "batch-size", num_sources, NULL);
+      ("WARNING: Overriding infer-config batch-size (%d) with number of sources (%d)\n",
+      pgie_batch_size, num_sources);
+    g_object_set (G_OBJECT (seg), 
+      "batch-size", num_sources, NULL);
   }
 
-  g_object_set (G_OBJECT (nvsegvisual), "batch-size", num_sources, NULL);
-  g_object_set (G_OBJECT (nvsegvisual), "width", 512, NULL);
-  g_object_set (G_OBJECT (nvsegvisual), "height", 512, NULL);
+  g_object_set (G_OBJECT (nvsegvisual), 
+    "batch-size", num_sources, 
+    "width", 512,
+    "height", 512, NULL);
 
   tiler_rows = (guint) sqrt (num_sources);
   tiler_columns = (guint) ceil (1.0 * num_sources / tiler_rows);
   /* we set the tiler properties here */
-  g_object_set (G_OBJECT (tiler), "rows", tiler_rows, "columns", tiler_columns,
-      "width", TILED_OUTPUT_WIDTH, "height", TILED_OUTPUT_HEIGHT, NULL);
+  g_object_set (G_OBJECT (tiler), 
+    "rows", tiler_rows, 
+    "columns", tiler_columns,
+    "width", TILED_OUTPUT_WIDTH, 
+    "height", TILED_OUTPUT_HEIGHT, NULL);
 
-  g_object_set(G_OBJECT(sink), "async", FALSE, NULL);
+  g_object_set (G_OBJECT (sink), 
+    "async", FALSE, NULL);
 
   /* we add a message handler */
   bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
@@ -378,7 +402,8 @@ main (int argc, char *argv[])
 
   /* Set up the pipeline */
   /* Add all elements into the pipeline */
-  gst_bin_add_many (GST_BIN (pipeline), nvvidconv, seg, nvsegvisual, tiler, sink, NULL);
+  gst_bin_add_many (GST_BIN (pipeline), 
+    nvvidconv, seg, nvsegvisual, tiler, sink, NULL);
   /* Link the elements together
   * nvstreammux -> nvvideoconv -> nvinfer -> nvsegvisual -> nvtiler -> video-renderer */
   if (!gst_element_link_many (streammux, nvvidconv, seg, nvsegvisual, tiler, sink, NULL)) {
@@ -386,9 +411,12 @@ main (int argc, char *argv[])
     return -1;
   }
 
+  /* Давайте добавим зонд, чтобы получать информацию о сгенерированных метаданных. Мы добавим зонд в
+   *src-панель элемента nvseg, так как к тому времени буфер уже будет
+   * получили все метаданные сегментации. */
   /* Lets add probe to get informed of the meta data generated, we add probe to
-   * the src pad of the nvseg element, since by that time, the buffer would have
-   * had got all the segmentation metadata. */
+   * the sink pad of the osd element, since by that time, the buffer would have
+   * had got all the metadata. */
   seg_src_pad = gst_element_get_static_pad (seg, "src");
   if (!seg_src_pad)
     g_print ("Unable to get src pad\n");
@@ -397,14 +425,16 @@ main (int argc, char *argv[])
         tiler_src_pad_buffer_probe, NULL, NULL);
   gst_object_unref (seg_src_pad);
 
-  /* Set the pipeline to "playing" state */
+  /* Установите трубопровод на «игра» */
   g_print ("Now playing...\n");
   gst_element_set_state (pipeline, GST_STATE_PLAYING);
 
+  /* Подождите, пока конвейер не обнаружит ошибку или EOS. */
   /* Wait till pipeline encounters an error or EOS */
   g_print ("Running...\n");
   g_main_loop_run (loop);
 
+  /* Из главной петли, хорошо очиститься */
   /* Out of the main loop, clean up nicely */
   g_print ("Returned, stopping playback\n");
   gst_element_set_state (pipeline, GST_STATE_NULL);
