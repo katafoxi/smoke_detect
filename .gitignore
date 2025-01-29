@@ -2,5 +2,8 @@ streams/*
 *.engine
 *.onnx
 *.o
+*.code-workspace
+*.vscode
+
 
 
