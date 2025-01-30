@@ -5,4 +5,3 @@ streams/*
 *.code-workspace
 *.vscode
 src/*segmentation-custom
-*segmentation-custom
