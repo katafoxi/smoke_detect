@@ -115,8 +115,8 @@ static void
 on_pad_added (
   GstElement * element, 
   GstPad *pad, 
-  gpointer data)
-{
+  gpointer data) {
+    
   GstPad *sinkpad;
   GstElement *jpegparse = (GstElement *) data;
 
@@ -149,9 +149,12 @@ create_source_bin (guint index, gchar * uri)
    * pipeline */
   bin = gst_bin_new (bin_name);
 
+  /* Source element for reading from the uri.
+   * We will use decodebin and let it figure out the container format of the
+   * stream and the codec and plug the appropriate demux and decode plugins. */
   uri_decode_bin = gst_element_factory_make ("nvurisrcbin", "uri-decode-bin");
-  g_object_set (G_OBJECT (uri_decode_bin), "file-loop", TRUE, NULL);
-  g_object_set (G_OBJECT (uri_decode_bin), "cudadec-memtype", 0, NULL);
+  // g_object_set (G_OBJECT (uri_decode_bin), "file-loop", TRUE, NULL);
+  // g_object_set (G_OBJECT (uri_decode_bin), "cudadec-memtype", 0, NULL);
 
   // h264parser = gst_element_factory_make ("jpegparse", "jpeg-parser");
   h264parser = gst_element_factory_make ("h264parse", "h264-parser");
@@ -160,7 +163,7 @@ create_source_bin (guint index, gchar * uri)
 
   if (!uri_decode_bin || !h264parser || !decoder)
   {
-    g_printerr ("One element could not be created. Exiting.\n");
+    g_printerr ("One element in source bin could not be created. Exiting.\n");
     return NULL;
   }
   g_object_set (G_OBJECT (uri_decode_bin), 
@@ -194,9 +197,16 @@ create_source_bin (guint index, gchar * uri)
       h264parser, 
       decoder, NULL);
 
-    g_signal_connect (qtdemux, "pad-added", G_CALLBACK (on_pad_added), h264parser);
+    /* Connect to the "pad-added" signal of the decodebin which generates a
+    * callback once a new pad for raw data has beed created by the decodebin */
+    g_signal_connect (
+      qtdemux, 
+      "pad-added", 
+      G_CALLBACK (on_pad_added), 
+      h264parser);
   }
   else {
+    // add uri_decode_bin to common bin
     gst_bin_add_many (GST_BIN (bin), 
       uri_decode_bin, 
       h264parser, 
