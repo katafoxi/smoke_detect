@@ -135,8 +135,8 @@ create_source_bin (guint index, gchar * uri)
   GstElement 
     *bin = NULL, 
     *uri_decode_bin = NULL,
-    *h264parser, 
-    *decoder;
+    *h264parser = NULL, 
+    *decoder = NULL;
   gchar bin_name[16] = { };
 
   int current_device = -1;
@@ -150,6 +150,8 @@ create_source_bin (guint index, gchar * uri)
   bin = gst_bin_new (bin_name);
 
   uri_decode_bin = gst_element_factory_make ("nvurisrcbin", "uri-decode-bin");
+  g_object_set (G_OBJECT (uri_decode_bin), "file-loop", TRUE, NULL);
+  g_object_set (G_OBJECT (uri_decode_bin), "cudadec-memtype", 0, NULL);
 
   // h264parser = gst_element_factory_make ("jpegparse", "jpeg-parser");
   h264parser = gst_element_factory_make ("h264parse", "h264-parser");
@@ -162,7 +164,7 @@ create_source_bin (guint index, gchar * uri)
     return NULL;
   }
   g_object_set (G_OBJECT (uri_decode_bin), 
-    "location", uri, NULL);
+    "uri", uri, NULL);
   const char *dot = strrchr(uri, '.');
   if (!strcmp (dot+1, "mp4"))
   {
