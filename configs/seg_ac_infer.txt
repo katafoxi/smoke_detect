@@ -59,7 +59,7 @@ net-scale-factor=0.01480994963
 #model-engine-file=../models/fire_base.onnx_b1_gpu0_fp32.engine
 
 onnx-file=../models/fire_softmax.onnx
-model-engine-file=../models/fire_softmax.onnx_b2_gpu0_fp16.engine
+model-engine-file=../models/fire_softmax.onnx_b1_gpu0_fp16.engine
 
 infer-dims=3;512;512
 #uff-input-order=0
