@@ -38,6 +38,9 @@
 
 #define NVINFER_PLUGIN "nvinfer"
 #define NVINFERSERVER_PLUGIN "nvinferserver"
+/* NVIDIA Decoder source pad memory feature. This feature signifies that source
+ * pads having this capability will push GstBuffers containing cuda buffers. */
+#define GST_CAPS_FEATURES_NVMM "memory:NVMM"
 static gboolean PERF_MODE = FALSE;
 
 /* tiler_sink_pad_buffer_probe  will extract metadata received on 
@@ -111,22 +114,56 @@ bus_call (GstBus * bus, GstMessage * msg, gpointer data)
   return TRUE;
 }
 
-static void 
-on_pad_added (
-  GstElement * element, 
-  GstPad *pad, 
-  gpointer data) {
+// static void 
+// on_pad_added (
+//   GstElement * element, 
+//   GstPad *pad, 
+//   gpointer data) {
     
-  GstPad *sinkpad;
-  GstElement *jpegparse = (GstElement *) data;
+//   GstPad *sinkpad;
+//   GstElement *jpegparse = (GstElement *) data;
 
-  g_print ("Dynamic pad created, linking qtdemux to parser\n");
+//   g_print ("Dynamic pad created, linking qtdemux to parser\n");
 
-  sinkpad = gst_element_get_static_pad (jpegparse, "sink");
+//   sinkpad = gst_element_get_static_pad (jpegparse, "sink");
 
-  gst_pad_link (pad, sinkpad);
+//   gst_pad_link (pad, sinkpad);
 
-  gst_object_unref (sinkpad);
+//   gst_object_unref (sinkpad);
+// }
+static void 
+cb_newpad (
+  GstElement * decodebin, 
+  GstPad * decoder_src_pad, 
+  gpointer data) {
+
+  GstCaps *caps = gst_pad_get_current_caps (decoder_src_pad);
+  if (!caps) {
+    caps = gst_pad_query_caps (decoder_src_pad, NULL);
+  }
+  const GstStructure *str = gst_caps_get_structure (caps, 0);
+  const gchar *name = gst_structure_get_name (str);
+  GstElement *source_bin = (GstElement *) data;
+  GstCapsFeatures *features = gst_caps_get_features (caps, 0);
+
+  /* Need to check if the pad created by the decodebin is for video and not
+   * audio. */
+  if (!strncmp (name, "video", 5)) {
+    /* Link the decodebin pad only if decodebin has picked nvidia
+     * decoder plugin nvdec_*. We do this by checking if the pad caps contain
+     * NVMM memory features. */
+    if (gst_caps_features_contains (features, GST_CAPS_FEATURES_NVMM)) {
+      /* Get the source bin ghost pad */
+      GstPad *bin_ghost_pad = gst_element_get_static_pad (source_bin, "src");
+      if (!gst_ghost_pad_set_target (GST_GHOST_PAD (bin_ghost_pad),
+              decoder_src_pad)) {
+        g_printerr ("Failed to link decoder src pad to source bin ghost pad\n");
+      }
+      gst_object_unref (bin_ghost_pad);
+    } else {
+      g_printerr ("Error: Decodebin did not pick nvidia decoder plugin.\n");
+    }
+  }
 }
 
 static GstElement *
@@ -134,9 +171,9 @@ create_source_bin (guint index, gchar * uri)
 {
   GstElement 
     *bin = NULL, 
-    *uri_decode_bin = NULL,
-    *h264parser = NULL, 
-    *decoder = NULL;
+    *uri_decode_bin = NULL;
+    // *h264parser = NULL, 
+    // *decoder = NULL;
   gchar bin_name[16] = { };
 
   int current_device = -1;
@@ -152,71 +189,84 @@ create_source_bin (guint index, gchar * uri)
   /* Source element for reading from the uri.
    * We will use decodebin and let it figure out the container format of the
    * stream and the codec and plug the appropriate demux and decode plugins. */
-  uri_decode_bin = gst_element_factory_make ("nvurisrcbin", "uri-decode-bin");
+  uri_decode_bin = gst_element_factory_make ("uridecodebin", "uri-decode-bin");
+  if (!bin || !uri_decode_bin) {
+  g_printerr ("One element in source bin could not be created.\n");
+  return NULL;
+  }
+  g_object_set (G_OBJECT (uri_decode_bin), 
+  "uri", uri, NULL);
+    g_signal_connect (
+    G_OBJECT (uri_decode_bin), 
+    "pad-added", 
+    G_CALLBACK (cb_newpad), 
+    bin);
+  // add uri_decode_bin to common bin
+  gst_bin_add (GST_BIN (bin),     
+  uri_decode_bin);
   // g_object_set (G_OBJECT (uri_decode_bin), "file-loop", TRUE, NULL);
   // g_object_set (G_OBJECT (uri_decode_bin), "cudadec-memtype", 0, NULL);
 
   // h264parser = gst_element_factory_make ("jpegparse", "jpeg-parser");
-  h264parser = gst_element_factory_make ("h264parse", "h264-parser");
+  // h264parser = gst_element_factory_make ("h264parse", "h264-parser");
 
-  decoder = gst_element_factory_make ("nvv4l2decoder", "nvv4l2-decoder");
+  // decoder = gst_element_factory_make ("nvv4l2decoder", "nvv4l2-decoder");
 
-  if (!uri_decode_bin || !h264parser || !decoder)
-  {
-    g_printerr ("One element in source bin could not be created. Exiting.\n");
-    return NULL;
-  }
-  g_object_set (G_OBJECT (uri_decode_bin), 
-    "uri", uri, NULL);
-  const char *dot = strrchr(uri, '.');
-  if (!strcmp (dot+1, "mp4"))
-  {
-    if(prop.integrated) {
-      g_object_set (G_OBJECT (decoder), 
-        "mjpeg", 1, NULL);
-    }
+  // if (!uri_decode_bin || !h264parser || !decoder)
+  // {
+  //   g_printerr ("One element in source bin could not be created. Exiting.\n");
+  //   return NULL;
+  // }
 
-    GstElement *qtdemux = gst_element_factory_make ("qtdemux", "qt-demux");
-    if (!qtdemux)
-    {
-      g_printerr ("One element could not be created. Exiting.\n");
-      return NULL;
-    }
+  // const char *dot = strrchr(uri, '.');
+  // if (!strcmp (dot+1, "mp4"))
+  // {
+  //   if(prop.integrated) {
+  //     g_object_set (G_OBJECT (decoder), 
+  //       "mjpeg", 1, NULL);
+  //   }
 
-    gst_bin_add_many (GST_BIN(bin), 
-      uri_decode_bin, 
-      qtdemux, NULL);
-    gst_element_link_many (
-      uri_decode_bin, 
-      qtdemux, NULL);
+  //   GstElement *qtdemux = gst_element_factory_make ("qtdemux", "qt-demux");
+  //   if (!qtdemux)
+  //   {
+  //     g_printerr ("One element could not be created. Exiting.\n");
+  //     return NULL;
+  //   }
 
-    gst_bin_add_many (GST_BIN(bin), 
-      h264parser, 
-      decoder, NULL);
-    gst_element_link_many (
-      h264parser, 
-      decoder, NULL);
+  //   gst_bin_add_many (GST_BIN(bin), 
+  //     uri_decode_bin, 
+  //     qtdemux, NULL);
+  //   gst_element_link_many (
+  //     uri_decode_bin, 
+  //     qtdemux, NULL);
+
+  //   gst_bin_add_many (GST_BIN(bin), 
+  //     h264parser, 
+  //     decoder, NULL);
+  //   gst_element_link_many (
+  //     h264parser, 
+  //     decoder, NULL);
 
     /* Connect to the "pad-added" signal of the decodebin which generates a
     * callback once a new pad for raw data has beed created by the decodebin */
-    g_signal_connect (
-      qtdemux, 
-      "pad-added", 
-      G_CALLBACK (on_pad_added), 
-      h264parser);
-  }
-  else {
-    // add uri_decode_bin to common bin
-    gst_bin_add_many (GST_BIN (bin), 
-      uri_decode_bin, 
-      h264parser, 
-      decoder, NULL);
+  //   g_signal_connect (
+  //     qtdemux, 
+  //     "pad-added", 
+  //     G_CALLBACK (on_pad_added), 
+  //     h264parser);
+  // }
+  // else {
+  //   // add uri_decode_bin to common bin
+  //   gst_bin_add_many (GST_BIN (bin), 
+  //     uri_decode_bin, 
+  //     h264parser, 
+  //     decoder, NULL);
     
-    gst_element_link_many (
-      uri_decode_bin,
-      h264parser, 
-      decoder, NULL);
-  }
+  //   gst_element_link_many (
+  //     uri_decode_bin,
+  //     h264parser, 
+  //     decoder, NULL);
+  // }
 
 
   
@@ -231,16 +281,16 @@ create_source_bin (guint index, gchar * uri)
     return NULL;
   }
 
-  GstPad *srcpad = gst_element_get_static_pad (decoder, "src");
-  if (!srcpad) {
-    g_printerr ("Failed to get src pad of source bin. Exiting.\n");
-    return NULL;
-  }
-  GstPad *bin_ghost_pad = gst_element_get_static_pad (bin, "src");
-  if (!gst_ghost_pad_set_target (GST_GHOST_PAD (bin_ghost_pad),
-        srcpad)) {
-    g_printerr ("Failed to link decoder src pad to source bin ghost pad\n");
-  }
+  // GstPad *srcpad = gst_element_get_static_pad (decoder, "src");
+  // if (!srcpad) {
+  //   g_printerr ("Failed to get src pad of source bin. Exiting.\n");
+  //   return NULL;
+  // }
+  // GstPad *bin_ghost_pad = gst_element_get_static_pad (bin, "src");
+  // if (!gst_ghost_pad_set_target (GST_GHOST_PAD (bin_ghost_pad),
+  //       srcpad)) {
+  //   g_printerr ("Failed to link decoder src pad to source bin ghost pad\n");
+  // }
 
   return bin;
 }
