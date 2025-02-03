@@ -49,10 +49,15 @@
 
 [property]
 gpu-id=0
-model-color-format=0
+model-color-format=1
 
 #offsets=121.32867734;119.34174087;114.98251456
-offsets=114.98251456;119.34174087;121.32867734
+#old offsets=114.98251456;119.34174087;121.32867734
+
+#BGR
+#offsets=69.79;66.86;65.85
+offsets=121.33;119.34;114.98
+
 net-scale-factor=0.01480994963
 
 #onnx-file=../models/fire_base.onnx
@@ -68,7 +73,7 @@ batch-size=1
 ## 0=FP32, 1=INT8, 2=FP16 mode
 network-mode=2
 num-detected-classes=2
-interval=10
+interval=0
 gie-unique-id=1
 network-type=2
 #output-blob-names=final_conv/BiasAdd
