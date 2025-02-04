@@ -47,6 +47,11 @@
 # The values in the config file are overridden by values set through GObject
 # properties.
 
+[application]
+enable-perf-measurement=1
+perf-measurement-interval-sec=10
+
+
 [property]
 gpu-id=0
 model-color-format=1
@@ -55,8 +60,8 @@ model-color-format=1
 #old offsets=114.98251456;119.34174087;121.32867734
 
 #BGR
-#offsets=69.79;66.86;65.85
-offsets=121.33;119.34;114.98
+offsets=69.79;66.86;65.85
+#offsets=121.33;119.34;114.98
 
 net-scale-factor=0.01480994963
 
@@ -83,6 +88,7 @@ segmentation-threshold=0.1
 ##(Instance Segmentation, Primary, Boolean) Gst-nvinfer присоединяет выходные данные маски экземпляра к метаданным объекта.
 #output-instance-mask=1
 #cluster-mode=4
+#filter-out-class-ids=2
 
 [class-attrs-all]
 roi-top-offset=0
@@ -94,7 +100,7 @@ detected-max-h=0
 
 ## Per class configuration
 #[class-attrs-2]
-#threshold=0.6
+#threshold=0.5
 #roi-top-offset=20
 #roi-bottom-offset=10
 #detected-min-w=40
