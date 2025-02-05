@@ -214,11 +214,13 @@ main (int argc, char *argv[])
   GstElement  
     *pipeline = NULL, 
     *streammux = NULL, 
-    *sink = NULL, 
-    *nvvidconv = NULL, 
     *pgie = NULL,
+    *nvvidconv = NULL, 
     *nvsegvisual = NULL, 
-    *tiler = NULL;
+    *nvdsosd = NULL,
+    *tiler = NULL,
+    *sink = NULL;
+
   GstBus *bus = NULL;
   guint bus_watch_id;
   GstPad *tiler_src_pad = NULL;
@@ -323,13 +325,12 @@ main (int argc, char *argv[])
           "primary-nvinference-engine");
 
   nvsegvisual = gst_element_factory_make ("nvsegvisual", "nvsegvisual");
-
+  nvdsosd = gst_element_factory_make("nvdsosd", "onscreendisplay");
+  /* Use convertor to convert to appropriate format */
+  nvvidconv = gst_element_factory_make ("nvvideoconvert", "nvvideo-converter");
   /* Use nvtiler to composite the batched frames into a 2D tiled array based
    * on the source of the frames. */
   tiler = gst_element_factory_make ("nvmultistreamtiler", "nvtiler");
-
-  /* Use convertor to convert to appropriate format */
-  nvvidconv = gst_element_factory_make ("nvvideoconvert", "nvvideo-converter");
   if(prop.integrated)  {
     sink = gst_element_factory_make ("nv3dsink", "nvvideo-renderer");
   } else {
@@ -388,10 +389,23 @@ main (int argc, char *argv[])
     "rows", tiler_rows, 
     "columns", tiler_columns,
     "width", TILED_OUTPUT_WIDTH, 
-    "height", TILED_OUTPUT_HEIGHT, NULL);
+    "height", TILED_OUTPUT_HEIGHT, 
+    NULL);
 
   g_object_set (G_OBJECT (sink), 
-    "async", FALSE, NULL);
+    "async", FALSE, 
+    NULL);
+
+  g_object_set(G_OBJECT(nvdsosd),
+    "display-clock", 1,
+    "display-mask", 1,
+    "clock-font", "Serif",
+    "clock-font-size", 12,
+    //"x-clock-offset", 400,
+    //"y-clock-offset", 420,
+    "process-mode", 1,
+    "qos", 1,
+    NULL);
 
   /* we add a message handler */
   bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
@@ -401,19 +415,21 @@ main (int argc, char *argv[])
   /* Set up the pipeline */
   /* Add all elements into the pipeline */
   gst_bin_add_many (GST_BIN (pipeline), 
-    nvvidconv, 
     pgie, 
     nvsegvisual, 
+    nvvidconv, 
     tiler, 
+    nvdsosd,
     sink, NULL);
   /* Link the elements together
   * nvstreammux -> nvvideoconv -> nvinfer -> nvsegvisual -> nvtiler -> video-renderer */
   if (!gst_element_link_many (
     streammux, 
-    nvvidconv, 
     pgie, 
     nvsegvisual, 
+    nvvidconv, 
     tiler, 
+    nvdsosd,
     sink, NULL)) {
     g_printerr ("Elements could not be linked. Exiting.\n");
     return -1;
