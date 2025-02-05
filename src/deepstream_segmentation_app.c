@@ -368,10 +368,18 @@ main (int argc, char *argv[])
       "batch-size", num_sources, NULL);
   }
 
+  // https://forums.developer.nvidia.com/t/how-to-draw-masks-with-python/308209/9
   g_object_set (G_OBJECT (nvsegvisual), 
     "batch-size", num_sources, 
     "width", 512,
-    "height", 512, NULL);
+    "height", 512,
+    "alpha", 0.7,             // [float 0-1] Значение альфа для смешивания по пикселям. 
+    "original-background", 1, // [bool](0) вместо маскированного фона показывать оригинальный фон.
+    "class-id", 1,            // [uint](0) Идентификатор класса фона, должен быть установлен, если original-background установлен в TRUE
+    "gpu-on", 1,              // [bool](1) Переключение между памятью устройства и хоста
+    "qos", 0,                 // [bool](0) обработка событий качества обслуживания
+    "operate-on-seg-meta-id", 1, // [int](-1) Визуализация сегментации на seg-metadata с этим уникальным идентификатором. Установите значение -1 для визуализации всех метаданных.
+     NULL);
 
   tiler_rows = (guint) sqrt (num_sources);
   tiler_columns = (guint) ceil (1.0 * num_sources / tiler_rows);
