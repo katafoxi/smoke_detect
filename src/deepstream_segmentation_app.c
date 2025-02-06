@@ -41,6 +41,10 @@
 /* NVIDIA Decoder source pad memory feature. This feature signifies that source
  * pads having this capability will push GstBuffers containing cuda buffers. */
 #define GST_CAPS_FEATURES_NVMM "memory:NVMM"
+
+#define MAPPING "/ridgerun"
+#define SERVICE "12345"
+
 static gboolean PERF_MODE = FALSE;
 
 /* tiler_sink_pad_buffer_probe  will extract metadata received on 
@@ -219,6 +223,8 @@ main (int argc, char *argv[])
     *nvsegvisual = NULL, 
     *nvdsosd = NULL,
     *tiler = NULL,
+    *encoder = NULL,
+    *payloader = NULL,
     *sink = NULL;
 
   GstBus *bus = NULL;
@@ -269,13 +275,23 @@ main (int argc, char *argv[])
   /* Create Pipeline element that will form a connection of other elements */
   pipeline = gst_pipeline_new ("smoke-segmentation-pipeline");
 
+  //==========
+  // Streammux
+  //==========
   /* Create nvstreammux instance to form batches from one or more sources. */
   streammux = gst_element_factory_make ("nvstreammux", "stream-muxer");
 
   if (!pipeline || !streammux) {
-    g_printerr ("One element could not be created. Exiting.\n");
+    g_printerr ("Streammux element could not be created. Exiting.\n");
     return -1;
   }
+
+  g_object_set (G_OBJECT (streammux), 
+  "batch-size", num_sources, NULL);
+  g_object_set (G_OBJECT (streammux), 
+  "width", MUXER_OUTPUT_WIDTH, 
+  "height", MUXER_OUTPUT_HEIGHT,
+  "batched-push-timeout", MUXER_BATCH_TIMEOUT_USEC, NULL);
 
   gst_bin_add (GST_BIN (pipeline), streammux);
 
@@ -318,45 +334,24 @@ main (int argc, char *argv[])
     gst_object_unref (sinkpad);
   }
 
+  //==========
+  // PGIE
+  //==========
 
   /* Use nvinfer to infer on batched frame. */
   pgie = gst_element_factory_make (
           is_nvinfer_server ? NVINFERSERVER_PLUGIN : NVINFER_PLUGIN,
           "primary-nvinference-engine");
 
-  nvsegvisual = gst_element_factory_make ("nvsegvisual", "nvsegvisual");
-  nvdsosd = gst_element_factory_make("nvdsosd", "onscreendisplay");
-  /* Use convertor to convert to appropriate format */
-  nvvidconv = gst_element_factory_make ("nvvideoconvert", "nvvideo-converter");
-  /* Use nvtiler to composite the batched frames into a 2D tiled array based
-   * on the source of the frames. */
-  tiler = gst_element_factory_make ("nvmultistreamtiler", "nvtiler");
-  if(prop.integrated)  {
-    sink = gst_element_factory_make ("nv3dsink", "nvvideo-renderer");
-  } else {
-      #ifdef __aarch64__
-        sink = gst_element_factory_make ("nv3dsink", "nvvideo-renderer");
-      #else
-        sink = gst_element_factory_make ("nveglglessink", "nvvideo-renderer");
-      #endif
-  }
 
-  if (!nvvidconv || !pgie || !nvsegvisual || !tiler || !sink) {
-    g_printerr ("One element could not be created. Exiting.\n");
-    return -1;
-  }
-
-  g_object_set (G_OBJECT (streammux), 
-    "batch-size", num_sources, NULL);
-
-  g_object_set (G_OBJECT (streammux), 
-    "width", MUXER_OUTPUT_WIDTH, 
-    "height", MUXER_OUTPUT_HEIGHT,
-    "batched-push-timeout", MUXER_BATCH_TIMEOUT_USEC, NULL);
-
-  /* Configure the nvinfer element using the nvinfer config file. */
+    /* Configure the nvinfer element using the nvinfer config file. */
   g_object_set (G_OBJECT (pgie), 
     "config-file-path", infer_config_file, NULL);
+
+  if ( !pgie ) {
+    g_printerr ("PGIE could not be created. Exiting.\n");
+    return -1;
+  }
 
   /* Override the batch-size set in the config file with the number of sources. */
   g_object_get (G_OBJECT (pgie), 
@@ -367,6 +362,16 @@ main (int argc, char *argv[])
       pgie_batch_size, num_sources);
     g_object_set (G_OBJECT (pgie), 
       "batch-size", num_sources, NULL);
+  }
+
+
+  //==========
+  // NVSEGVISUAL
+  //==========
+  nvsegvisual = gst_element_factory_make ("nvsegvisual", "nvsegvisual");
+  if (!nvsegvisual ) {
+    g_printerr ("NVSEGVISUAL element could not be created. Exiting.\n");
+    return -1;
   }
 
   // https://forums.developer.nvidia.com/t/how-to-draw-masks-with-python/308209/9
@@ -382,6 +387,31 @@ main (int argc, char *argv[])
     "operate-on-seg-meta-id", 1, // [int](-1) Визуализация сегментации на seg-metadata с этим уникальным идентификатором. Установите значение -1 для визуализации всех метаданных.
      NULL);
 
+ 
+  //==========
+  // NVVIDCONV
+  //==========   
+  /* Use convertor to convert to appropriate format */
+  nvvidconv = gst_element_factory_make ("nvvideoconvert", "nvvideo-converter");
+
+  if ( !nvvidconv ) {
+    g_printerr ("One element could not be created. Exiting.\n");
+    return -1;
+  }
+
+
+  //==========
+  // TILER
+  //==========  
+
+  /* Use nvtiler to composite the batched frames into a 2D tiled array based
+   * on the source of the frames. */
+  tiler = gst_element_factory_make ("nvmultistreamtiler", "nvtiler");
+  if (!tiler ) {
+    g_printerr ("TILER element could not be created. Exiting.\n");
+    return -1;
+  }
+  
   tiler_rows = (guint) sqrt (num_sources);
   tiler_columns = (guint) ceil (1.0 * num_sources / tiler_rows);
   /* we set the tiler properties here */
@@ -392,10 +422,16 @@ main (int argc, char *argv[])
     "height", TILED_OUTPUT_HEIGHT, 
     NULL);
 
-  g_object_set (G_OBJECT (sink), 
-    "async", FALSE, 
-    NULL);
 
+  //==========
+  // NVDSOSD
+  //==========  
+
+  nvdsosd = gst_element_factory_make("nvdsosd", "onscreendisplay");
+  if ( !nvdsosd ) {
+    g_printerr ("NVDSOSD element could not be created. Exiting.\n");
+    return -1;
+  }
   g_object_set(G_OBJECT(nvdsosd),
     "display-clock", 1,
     "display-mask", 1,
@@ -406,6 +442,66 @@ main (int argc, char *argv[])
     "process-mode", 1,
     "qos", 1,
     NULL);
+
+  // //==========
+  // // ENCODER
+  // //========== 
+  // encoder = gst_element_factory_make("nvv4l2h264enc", "h264-encoder");
+  // if ( !encoder ) {
+  //   g_printerr ("Encoder nvv4l2h264enc element could not be created. Exiting.\n");
+  //   return -1;
+  // }
+  // // Настройка кодировщика H.264
+  // g_object_set(encoder, "bitrate", 4000000, NULL); // Битрейт 4 Мбит/с
+  // g_object_set(encoder, "preset-level", 1, NULL);  // Уровень предустановки (1 - быстрый, 4 - качественный)
+
+
+
+  // //==========
+  // // PAYLOADER
+  // //========== 
+  // payloader = gst_element_factory_make("rtph264pay", "rtp-payloader");
+  // if (!payloader ) {
+  //   g_printerr ("payloader element could not be created. Exiting.\n");
+  //   return -1;
+  // }
+  
+
+  //==========
+  // SINK
+  //==========  
+
+  if(prop.integrated)  {
+    sink = gst_element_factory_make ("nv3dsink", "nvvideo-renderer");
+  } else {
+      #ifdef __aarch64__
+        sink = gst_element_factory_make ("nv3dsink", "nvvideo-renderer");
+      #else
+        sink = gst_element_factory_make ("nveglglessink", "nvvideo-renderer");
+      #endif
+  }
+
+  g_object_set (G_OBJECT (sink), 
+  "async", FALSE, 
+  NULL);
+
+  //-------------------------------------------
+  
+  // sink = gst_element_factory_make("udpsink", "sink");
+
+  // if ( !sink) {
+  //   g_printerr ("SINK element could not be created. Exiting.\n");
+  //   return -1;
+  // }
+
+  // // Настройка UDP-сервера
+  // g_object_set(G_OBJECT(sink), 
+  //   "host", "127.0.0.1",  // // Адрес получателя
+  //   "port", 5000,  //  // Порт получателя
+  //   NULL);
+
+
+
 
   /* we add a message handler */
   bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
@@ -420,6 +516,8 @@ main (int argc, char *argv[])
     nvvidconv, 
     tiler, 
     nvdsosd,
+    // encoder,
+    // payloader,
     sink, NULL);
   /* Link the elements together
   * nvstreammux -> nvvideoconv -> nvinfer -> nvsegvisual -> nvtiler -> video-renderer */
@@ -430,6 +528,8 @@ main (int argc, char *argv[])
     nvvidconv, 
     tiler, 
     nvdsosd,
+    // encoder,
+    // payloader,
     sink, NULL)) {
     g_printerr ("Elements could not be linked. Exiting.\n");
     return -1;
