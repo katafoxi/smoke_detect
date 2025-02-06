@@ -446,59 +446,63 @@ main (int argc, char *argv[])
   // //==========
   // // ENCODER
   // //========== 
-  // encoder = gst_element_factory_make("nvv4l2h264enc", "h264-encoder");
-  // if ( !encoder ) {
-  //   g_printerr ("Encoder nvv4l2h264enc element could not be created. Exiting.\n");
-  //   return -1;
-  // }
-  // // Настройка кодировщика H.264
-  // g_object_set(encoder, "bitrate", 4000000, NULL); // Битрейт 4 Мбит/с
-  // g_object_set(encoder, "preset-level", 1, NULL);  // Уровень предустановки (1 - быстрый, 4 - качественный)
+  encoder = gst_element_factory_make("x264enc", "h264-encoder");
+  if ( !encoder ) {
+    g_printerr ("Encoder x264enc element could not be created. Exiting.\n");
+    return -1;
+  }
+  // Jetson Orin Nano не включает в себя аппаратные блоки для кодирования видео, поэтому вы не можете использовать nvv4l2h264enc. 
+  // https://forums.developer.nvidia.com/t/nvv4l2h264enc-plugin-not-working-on-jetson-orin-nano/271486/2
 
+  g_object_set(encoder, 
+  "bitrate", 2000000,          // Битрейт 2 Мбит/с
+  "tune", 0x00000004,          // zero latency
+  "speed-preset", 5,
+  NULL); 
 
 
   // //==========
   // // PAYLOADER
   // //========== 
-  // payloader = gst_element_factory_make("rtph264pay", "rtp-payloader");
-  // if (!payloader ) {
-  //   g_printerr ("payloader element could not be created. Exiting.\n");
-  //   return -1;
-  // }
+  payloader = gst_element_factory_make("rtph264pay", "rtp-payloader");
+  if (!payloader ) {
+    g_printerr ("payloader element could not be created. Exiting.\n");
+    return -1;
+  }
   
 
   //==========
   // SINK
   //==========  
 
-  if(prop.integrated)  {
-    sink = gst_element_factory_make ("nv3dsink", "nvvideo-renderer");
-  } else {
-      #ifdef __aarch64__
-        sink = gst_element_factory_make ("nv3dsink", "nvvideo-renderer");
-      #else
-        sink = gst_element_factory_make ("nveglglessink", "nvvideo-renderer");
-      #endif
-  }
+  // if(prop.integrated)  {
+  //   sink = gst_element_factory_make ("nv3dsink", "nvvideo-renderer");
+  // } else {
+  //     #ifdef __aarch64__
+  //       sink = gst_element_factory_make ("nv3dsink", "nvvideo-renderer");
+  //     #else
+  //       sink = gst_element_factory_make ("nveglglessink", "nvvideo-renderer");
+  //     #endif
+  // }
 
-  g_object_set (G_OBJECT (sink), 
-  "async", FALSE, 
-  NULL);
+  // g_object_set (G_OBJECT (sink), 
+  // "async", FALSE, 
+  // NULL);
 
   //-------------------------------------------
   
-  // sink = gst_element_factory_make("udpsink", "sink");
+  sink = gst_element_factory_make("udpsink", "sink");
 
-  // if ( !sink) {
-  //   g_printerr ("SINK element could not be created. Exiting.\n");
-  //   return -1;
-  // }
+  if ( !sink) {
+    g_printerr ("SINK element could not be created. Exiting.\n");
+    return -1;
+  }
 
-  // // Настройка UDP-сервера
-  // g_object_set(G_OBJECT(sink), 
-  //   "host", "127.0.0.1",  // // Адрес получателя
-  //   "port", 5000,  //  // Порт получателя
-  //   NULL);
+  // Настройка UDP-сервера
+  g_object_set(G_OBJECT(sink), 
+    "host", "127.0.0.1",  // // Адрес получателя
+    "port", 5000,  //  // Порт получателя
+    NULL);
 
 
 
@@ -513,23 +517,23 @@ main (int argc, char *argv[])
   gst_bin_add_many (GST_BIN (pipeline), 
     pgie, 
     nvsegvisual, 
-    nvvidconv, 
     tiler, 
     nvdsosd,
-    // encoder,
-    // payloader,
+    nvvidconv, 
+    encoder,
+    payloader,
     sink, NULL);
-  /* Link the elements together
-  * nvstreammux -> nvvideoconv -> nvinfer -> nvsegvisual -> nvtiler -> video-renderer */
+    
+  /* Link the elements together*/
   if (!gst_element_link_many (
     streammux, 
     pgie, 
     nvsegvisual, 
-    nvvidconv, 
     tiler, 
     nvdsosd,
-    // encoder,
-    // payloader,
+    nvvidconv, 
+    encoder,
+    payloader,
     sink, NULL)) {
     g_printerr ("Elements could not be linked. Exiting.\n");
     return -1;
