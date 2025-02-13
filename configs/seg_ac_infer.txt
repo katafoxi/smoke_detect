@@ -60,16 +60,32 @@ model-color-format=1
 #old offsets=114.98251456;119.34174087;121.32867734
 
 #BGR
-offsets=69.79;66.86;65.85
+#old fire offsets=69.79;66.86;65.85
 #offsets=121.33;119.34;114.98
+#smoke_offsets
+offsets=146.24873628;129.14695714;102.30211553
 
-net-scale-factor=0.01480994963
+# 0:NCHW партия N , каналы C , глубина D , высота H , ширина W
+# 1:NHWC
+network-input-order=0
 
+# 0:NCHW, партия N , каналы C , глубина D , высота H , ширина W
+# 1:NHWC
+segmentation-output-order=0
+
+net-scale-factor=0.0219706814816
+
+####_FIRE
 #onnx-file=../models/fire_base.onnx
-#model-engine-file=../models/fire_base.onnx_b1_gpu0_fp32.engine
+#model-engine-file=../models/fire_base.onnx_b1_gpu0_fp16.engine
+#onnx-file=../models/fire_softmax.onnx
+#model-engine-file=../models/fire_softmax.onnx_b1_gpu0_fp16.engine
 
-onnx-file=../models/fire_softmax.onnx
-model-engine-file=../models/fire_softmax.onnx_b1_gpu0_fp16.engine
+####_SMOKE
+onnx-file=../models/smoke_base.onnx
+model-engine-file=../models/smoke_base.onnx_b1_gpu0_fp16.engine
+#onnx-file=../models/smoke_softmax.onnx
+#model-engine-file=../models/smoke_softmax.onnx_b1_gpu0_fp16.engine
 
 infer-dims=3;512;512
 #uff-input-order=0
