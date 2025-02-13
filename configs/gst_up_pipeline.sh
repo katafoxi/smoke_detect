@@ -1,3 +1,4 @@
+#!/bin/bash
 gst-launch-1.0  \
 uridecodebin \
     uri=file:///ssd/wdir/smoke_detect/streams/OutputVideo1920p_yuv420p.mp4 \
@@ -41,14 +42,13 @@ x264enc  speed-preset=superfast  ! \
 rtph264pay  ! \
 udpsink  \
     host=127.0.0.1 \
-    port=5000 
+    port=5000 \
+    auto-multicast=true \
+    ttl-mc=3
     # sync=false \
     # auto-multicast=0
 
 
-# h264parse ! \
-# mpegtsmux ! \
-# rtpmp2tpay ! \
 
 #######
 <<PLAY_COMMANDS
