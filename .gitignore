@@ -1,6 +1,7 @@
 streams/*
-*.engine
 *.onnx
+*.engine
+*.engine.perfomance
 *.o
 *.code-workspace
 *.vscode
