@@ -24,7 +24,7 @@ nvsegvisual \
     height=512 \
     alpha=0.7 \
     original-background=1 \
-    class-id=1 \
+    class-id=0 \
     gpu-on=1 \
     qos=0 \
     operate-on-seg-meta-id=1 \
