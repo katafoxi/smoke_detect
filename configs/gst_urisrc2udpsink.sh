@@ -3,13 +3,13 @@ gst-launch-1.0  \
 uridecodebin \
     uri=file:///ssd/wdir/smoke_detect/streams/OutputVideo1920p_yuv420p.mp4 \
     name=dec \
-    ! \
+    !\
 m.sink_0 nvstreammux \
 	name=m \
 	batch-size=1 \
 	width=1280  \
 	height=720 \
-    ! \
+    !\
 nvinfer \
 	name=nvinfer \
 	unique-id=1  \
@@ -17,7 +17,7 @@ nvinfer \
 	infer-on-class-ids="0:"  \
 	batch-size=1  \
 	config-file-path="/ssd/wdir/smoke_detect/configs/seg_ac_infer.txt" \
-    ! \
+    !\
 nvsegvisual \
     batch-size=1 \
     width=512 \
@@ -28,7 +28,7 @@ nvsegvisual \
     gpu-on=1 \
     qos=0 \
     operate-on-seg-meta-id=1 \
-    ! \
+    !\
 nvdsosd \
     display-clock=1 \
     display-mask=1 \
@@ -36,7 +36,7 @@ nvdsosd \
     clock-font-size=12 \
     process-mode=1 \
     qos=1 \
-    ! \
+    !\
 nvvidconv ! video/x-raw,format=NV12 ! \
 x264enc  speed-preset=superfast  ! \
 rtph264pay  ! \
@@ -82,18 +82,18 @@ udpsrc multicast-group=224.100.10.10 port=3001 \
 PLAY_COMMANDS
 
 
-    
+<<EXAMPLES
+gst-launch-1.0 v4l2src device=/dev/video0 ! image/jpeg,format=MJPG,width=1280,height=720,framerate=30/1 ! nvv4l2decoder mjpeg=1 ! nvvidconv ! video/x-raw, format=NV12 ! x264enc speed-preset=superfast ! rtph264pay ! udpsink port=5000 host=127.0.0.1
 
-# gst-launch-1.0 v4l2src device=/dev/video0 ! image/jpeg,format=MJPG,width=1280,height=720,framerate=30/1 ! nvv4l2decoder mjpeg=1 ! nvvidconv ! video/x-raw, format=NV12 ! x264enc speed-preset=superfast ! rtph264pay ! udpsink port=5000 host=127.0.0.1
 
-
-# https://forums.developer.nvidia.com/t/vlc-cant-play-video-stream-from-orin-agx/230761/7
-# out_pipeline_str << "appsrc ! video/x-raw, format=(string)BGR ! "
-# "videoconvert ! video/x-raw, format=(string)BGRx ! 
-# nvvidconv ! "
-# "video/x-raw(memory:NVMM), format=(string)NV12 ! 
-# nvv4l2h264enc insert-sps-pps=true insert-vui=true idrinterval=15 ! "
-# "h264parse ! 
-# mpegtsmux ! 
-# rtpmp2tpay !
-# udpsink host=HOST_IP port=8001 auto-multicast=0";
+https://forums.developer.nvidia.com/t/vlc-cant-play-video-stream-from-orin-agx/230761/7
+out_pipeline_str << "appsrc ! video/x-raw, format=(string)BGR ! "
+"videoconvert ! video/x-raw, format=(string)BGRx ! 
+nvvidconv ! "
+"video/x-raw(memory:NVMM), format=(string)NV12 ! 
+nvv4l2h264enc insert-sps-pps=true insert-vui=true idrinterval=15 ! "
+"h264parse ! 
+mpegtsmux ! 
+rtpmp2tpay !
+udpsink host=HOST_IP port=8001 auto-multicast=0";
+EXAMPLES
