@@ -87,7 +87,9 @@ net-scale-factor=0.02197068
 #onnx-file=../models/smoke_base.onnx
 #model-engine-file=../models/smoke_base.onnx_b1_gpu0_fp16.engine
 onnx-file=../models/smoke_softmax.onnx
-model-engine-file=../models/smoke_softmax.onnx_b1_gpu0_fp16.engine
+#model-engine-file=../models/smoke_softmax.onnx_b1_gpu0_fp16.engine
+model-engine-file=../models/smoke_softmax_int8.engine
+
 
 infer-dims=3;512;512
 #uff-input-order=0
@@ -100,7 +102,7 @@ interval=0
 gie-unique-id=1
 network-type=2
 #output-blob-names=final_conv/BiasAdd
-segmentation-threshold=0.1
+segmentation-threshold=0.5
 #scaling-filter=0
 #scaling-compute-hw=0
 ##(Instance Segmentation, Primary, Boolean) Gst-nvinfer присоединяет выходные данные маски экземпляра к метаданным объекта.
