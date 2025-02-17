@@ -7,3 +7,4 @@ streams/*
 *.vscode
 src/*segmentation-custom
 *.pdf
+*.mp4
