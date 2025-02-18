@@ -16,7 +16,7 @@ nvinfer \
 	infer-on-gie-id=1 \
 	infer-on-class-ids="0:"  \
 	batch-size=1  \
-	config-file-path="./seg_ac_infer.txt" \
+	config-file-path="./segm_aa_infer_conf.txt" \
     !\
 nvsegvisual \
     batch-size=1 \
