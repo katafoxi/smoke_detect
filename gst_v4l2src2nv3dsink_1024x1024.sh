@@ -15,11 +15,11 @@ nvinfer \
 	infer-on-gie-id=1 \
 	infer-on-class-ids="0:"  \
 	batch-size=1  \
-	config-file-path="./configs/segm_aa_infer_conf.txt" !\
+	config-file-path="./configs/segm_aa_infer_conf_1024x1024.txt" !\
 nvsegvisual \
     batch-size=1 \
-    width=512 \
-    height=512 \
+    width=1024 \
+    height=1024 \
     alpha=0.7 \
     original-background=1 \
     class-id=0 \
