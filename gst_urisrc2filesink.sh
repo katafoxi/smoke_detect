@@ -1,9 +1,8 @@
 #!/bin/bash
 gst-launch-1.0 \
-v4l2src device=/dev/video0 !\
-    image/jpeg,format=MJPG,width=1280,height=720,framerate=30/1 !\
-nvv4l2decoder mjpeg=1 !\
-nvvidconv ! video/x-raw, format=NV12 !\
+uridecodebin \
+    uri=file://./streams/OutputVideo1920p_yuv420p.mp4 \
+    name=dec !\
 m.sink_0 nvstreammux \
 	name=m \
 	batch-size=1 \
@@ -15,7 +14,7 @@ nvinfer \
 	infer-on-gie-id=1 \
 	infer-on-class-ids="0:"  \
 	batch-size=1  \
-	config-file-path="/ssd/wdir/smoke_detect/configs/seg_ac_infer.txt" !\
+	config-file-path="./configs/seg_ac_infer.txt" !\
 nvsegvisual \
     batch-size=1 \
     width=512 \
@@ -33,5 +32,7 @@ nvdsosd \
     clock-font-size=12 \
     process-mode=1 \
     qos=1 !\
-nvvidconv ! "video/x-raw,format=NV12" !\
-nv3dsink async=0 \
+nvvidconv ! video/x-raw,format=NV12 ! \
+x264enc  speed-preset=superfast  ! \
+mux. mp4mux name=mux ! \
+filesink location=segm_smoke.mp4

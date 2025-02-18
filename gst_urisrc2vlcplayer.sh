@@ -6,7 +6,7 @@
 #<<Open_source_CPU_based_encoder
 gst-launch-1.0 \
 uridecodebin \
-    uri=file:///ssd/wdir/smoke_detect/streams/OutputVideo1920p_yuv420p.mp4 \
+    uri=file:///wdir/smoke_detect/streams/OutputVideo1920p_yuv420p.mp4 \
     name=dec !\
 m.sink_0 nvstreammux \
     name=m \
@@ -19,7 +19,7 @@ nvinfer \
     infer-on-gie-id=1 \
     infer-on-class-ids="0:" \
     batch-size=1  \
-    config-file-path="/ssd/wdir/smoke_detect/configs/seg_ac_infer.txt" !\
+    config-file-path="/wdir/smoke_detect/configs/seg_ac_infer.txt" !\
 nvsegvisual \
     batch-size=1 \
     width=512 \
