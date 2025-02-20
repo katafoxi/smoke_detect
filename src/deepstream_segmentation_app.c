@@ -346,7 +346,11 @@ main (int argc, char *argv[])
 
     /* Configure the nvinfer element using the nvinfer config file. */
   g_object_set (G_OBJECT (pgie), 
-    "config-file-path", infer_config_file, NULL);
+    "config-file-path", infer_config_file, 
+    "unique-id", 1,
+    "infer-on-gie-id", 1,
+    "infer-on-class-ids", "0:",
+    NULL);
 
   if ( !pgie ) {
     g_printerr ("PGIE could not be created. Exiting.\n");
@@ -380,12 +384,12 @@ main (int argc, char *argv[])
     "batch-size", num_sources, 
     "width", 512,
     "height", 512,
-    "alpha", 0.7,             // [float 0-1] Значение альфа для смешивания по пикселям. 
-    "original-background", 1, // [bool](0) вместо маскированного фона показывать оригинальный фон.
-    "class-id", 1,            // [uint](0) Идентификатор класса фона, должен быть установлен, если original-background установлен в TRUE
-    "gpu-on", 1,              // [bool](1) Переключение между памятью устройства и хоста
-    "qos", 0,                 // [bool](0) обработка событий качества обслуживания
-    "operate-on-seg-meta-id", 1, // [int](-1) Визуализация сегментации на seg-metadata с этим уникальным идентификатором. Установите значение -1 для визуализации всех метаданных.
+    "alpha", 0.7,                 // [float 0-1] Значение альфа для смешивания по пикселям. 
+    "class-id", 0,                // [uint](0) Идентификатор класса фона, должен быть установлен, если original-background установлен в TRUE
+    "gpu-on", 1,                  // [bool](1) Переключение между памятью устройства и хоста
+    "operate-on-seg-meta-id", 1,  // [int](-1) Визуализация сегментации на seg-metadata с этим уникальным идентификатором. Установите значение -1 для визуализации всех метаданных.
+    "original-background", 1,     // [bool](0) вместо маскированного фона показывать оригинальный фон.
+    "qos", 0,                     // [bool](0) обработка событий качества обслуживания
      NULL);
 
      //==========
