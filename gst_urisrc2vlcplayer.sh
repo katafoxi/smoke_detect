@@ -6,7 +6,7 @@
 #<<Open_source_CPU_based_encoder
 gst-launch-1.0 \
 uridecodebin \
-    uri=file://./streams/OutputVideo1920p_yuv420p.mp4 \
+    uri=file:///wdir/smoke_detect/streams/OutputVideo1920p_yuv420p.mp4 \
     name=dec !\
 m.sink_0 nvstreammux \
     name=m \

@@ -34,6 +34,8 @@ model-engine-file=../models/smoke_softmax_1024x1024_int8.engine
 
 
 infer-dims=3;1024;1024
+maintain-aspect-ratio=1
+symmetric-padding=1
 #uff-input-order=0
 #uff-input-blob-name=data
 batch-size=1

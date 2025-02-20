@@ -13,7 +13,7 @@ nvinfer \
 	name=nvinfer \
 	unique-id=1  \
 	infer-on-gie-id=1 \
-	infer-on-class-ids="0:"  \
+	infer-on-class-ids="0:" \
 	batch-size=1  \
 	config-file-path="./configs/segm_aa_infer_conf_1024x1024.txt" !\
 nvsegvisual \
