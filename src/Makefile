@@ -15,7 +15,7 @@ ifeq ($(CUDA_VER),)
   $(error "CUDA_VER is not set")
 endif
 
-APP:= deepstream-segmentation-custom
+APP:= segmsmoke_app
 
 TARGET_DEVICE = $(shell gcc -dumpmachine | cut -f1 -d -)
 

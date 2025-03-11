@@ -346,7 +346,11 @@ main (int argc, char *argv[])
 
     /* Configure the nvinfer element using the nvinfer config file. */
   g_object_set (G_OBJECT (pgie), 
-    "config-file-path", infer_config_file, NULL);
+    "config-file-path", infer_config_file, 
+    "unique-id", 1,
+    "infer-on-gie-id", 1,
+    "infer-on-class-ids", "0:",
+    NULL);
 
   if ( !pgie ) {
     g_printerr ("PGIE could not be created. Exiting.\n");
@@ -355,7 +359,8 @@ main (int argc, char *argv[])
 
   /* Override the batch-size set in the config file with the number of sources. */
   g_object_get (G_OBJECT (pgie), 
-    "batch-size", &pgie_batch_size, NULL);
+    "batch-size", &pgie_batch_size,NULL);
+
   if (pgie_batch_size != num_sources && !is_nvinfer_server) {
     g_printerr
       ("WARNING: Overriding infer-config batch-size (%d) with number of sources (%d)\n",
@@ -379,20 +384,43 @@ main (int argc, char *argv[])
     "batch-size", num_sources, 
     "width", 512,
     "height", 512,
-    "alpha", 0.7,             // [float 0-1] Значение альфа для смешивания по пикселям. 
-    "original-background", 1, // [bool](0) вместо маскированного фона показывать оригинальный фон.
-    "class-id", 1,            // [uint](0) Идентификатор класса фона, должен быть установлен, если original-background установлен в TRUE
-    "gpu-on", 1,              // [bool](1) Переключение между памятью устройства и хоста
-    "qos", 0,                 // [bool](0) обработка событий качества обслуживания
-    "operate-on-seg-meta-id", 1, // [int](-1) Визуализация сегментации на seg-metadata с этим уникальным идентификатором. Установите значение -1 для визуализации всех метаданных.
+    "alpha", 0.7,                 // [float 0-1] Значение альфа для смешивания по пикселям. 
+    "class-id", 0,                // [uint](0) Идентификатор класса фона, должен быть установлен, если original-background установлен в TRUE
+    "gpu-on", 1,                  // [bool](1) Переключение между памятью устройства и хоста
+    "operate-on-seg-meta-id", 1,  // [int](-1) Визуализация сегментации на seg-metadata с этим уникальным идентификатором. Установите значение -1 для визуализации всех метаданных.
+    "original-background", 1,     // [bool](0) вместо маскированного фона показывать оригинальный фон.
+    "qos", 0,                     // [bool](0) обработка событий качества обслуживания
      NULL);
 
+     //==========
+     // NVDSOSD
+     //==========  
+   
+  nvdsosd = gst_element_factory_make("nvdsosd", "onscreendisplay");
+  if ( !nvdsosd ) {
+    g_printerr ("NVDSOSD element could not be created. Exiting.\n");
+    return -1;
+  }
+  g_object_set(G_OBJECT(nvdsosd),
+    "display-clock", 1,
+    "display-mask", 1,
+    "clock-font", "Serif",
+    "clock-font-size", 12,
+    //"x-clock-offset", 400,
+    //"y-clock-offset", 420,
+    "process-mode", 1,
+    "qos", 1,
+    NULL);
  
+
   //==========
   // NVVIDCONV
   //==========   
   /* Use convertor to convert to appropriate format */
   nvvidconv = gst_element_factory_make ("nvvideoconvert", "nvvideo-converter");
+  // g_object_set(G_OBJECT(nvvidconv),
+  // "video/x-raw,format=NV12",
+  //   NULL);
 
   if ( !nvvidconv ) {
     g_printerr ("One element could not be created. Exiting.\n");
@@ -423,25 +451,6 @@ main (int argc, char *argv[])
     NULL);
 
 
-  //==========
-  // NVDSOSD
-  //==========  
-
-  nvdsosd = gst_element_factory_make("nvdsosd", "onscreendisplay");
-  if ( !nvdsosd ) {
-    g_printerr ("NVDSOSD element could not be created. Exiting.\n");
-    return -1;
-  }
-  g_object_set(G_OBJECT(nvdsosd),
-    "display-clock", 1,
-    "display-mask", 1,
-    "clock-font", "Serif",
-    "clock-font-size", 12,
-    //"x-clock-offset", 400,
-    //"y-clock-offset", 420,
-    "process-mode", 1,
-    "qos", 1,
-    NULL);
 
   // //==========
   // // ENCODER
@@ -475,34 +484,34 @@ main (int argc, char *argv[])
   // SINK
   //==========  
 
-  // if(prop.integrated)  {
-  //   sink = gst_element_factory_make ("nv3dsink", "nvvideo-renderer");
-  // } else {
-  //     #ifdef __aarch64__
-  //       sink = gst_element_factory_make ("nv3dsink", "nvvideo-renderer");
-  //     #else
-  //       sink = gst_element_factory_make ("nveglglessink", "nvvideo-renderer");
-  //     #endif
-  // }
+  if(prop.integrated)  {
+    sink = gst_element_factory_make ("nv3dsink", "nvvideo-renderer");
+  } else {
+      #ifdef __aarch64__
+        sink = gst_element_factory_make ("nv3dsink", "nvvideo-renderer");
+      #else
+        sink = gst_element_factory_make ("nveglglessink", "nvvideo-renderer");
+      #endif
+  }
 
-  // g_object_set (G_OBJECT (sink), 
-  // "async", FALSE, 
-  // NULL);
+  g_object_set (G_OBJECT (sink), 
+  "async", FALSE, 
+  NULL);
 
   //-------------------------------------------
   
-  sink = gst_element_factory_make("udpsink", "sink");
+  // sink = gst_element_factory_make("udpsink", "sink");
 
-  if ( !sink) {
-    g_printerr ("SINK element could not be created. Exiting.\n");
-    return -1;
-  }
+  // if ( !sink) {
+  //   g_printerr ("SINK element could not be created. Exiting.\n");
+  //   return -1;
+  // }
 
-  // Настройка UDP-сервера
-  g_object_set(G_OBJECT(sink), 
-    "host", "127.0.0.1",  // // Адрес получателя
-    "port", 5000,  //  // Порт получателя
-    NULL);
+  // // Настройка UDP-сервера
+  // g_object_set(G_OBJECT(sink), 
+  //   "host", "127.0.0.1",  // // Адрес получателя
+  //   "port", 5000,  //  // Порт получателя
+  //   NULL);
 
 
 
@@ -517,23 +526,28 @@ main (int argc, char *argv[])
   gst_bin_add_many (GST_BIN (pipeline), 
     pgie, 
     nvsegvisual, 
-    tiler, 
     nvdsosd,
     nvvidconv, 
-    encoder,
-    payloader,
     sink, NULL);
     
+  // gst_bin_add_many (GST_BIN (pipeline), 
+  //   pgie, 
+  //   nvsegvisual, 
+  //   tiler, 
+  //   nvdsosd,
+  //   nvvidconv, 
+  //   encoder,
+  //   payloader,
+  //   sink, NULL);
+
+
   /* Link the elements together*/
   if (!gst_element_link_many (
     streammux, 
     pgie, 
     nvsegvisual, 
-    tiler, 
     nvdsosd,
     nvvidconv, 
-    encoder,
-    payloader,
     sink, NULL)) {
     g_printerr ("Elements could not be linked. Exiting.\n");
     return -1;

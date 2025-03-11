@@ -34,4 +34,8 @@ nvdsosd \
     process-mode=1 \
     qos=1 !\
 nvvidconv ! "video/x-raw,format=NV12" !\
+textoverlay \
+    text="Hello Smoke!" \
+    font-desc="Sans, 72" \
+    shaded-background=yes !\
 nv3dsink async=0 

@@ -8,3 +8,4 @@ streams/*
 src/*segmentation-custom
 *.pdf
 *.mp4
+*_app
