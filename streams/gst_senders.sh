@@ -14,9 +14,9 @@ SRTPORT=5005
 
 # gst-launch-1.0  \
 # filesrc location=OutputVideo1920p_yuv420p.srt !\
-#     subparse !\
-#     rtpgstpay pt=98  !\
-#     queue !\
+# subparse !\
+# rtpgstpay pt=98  !\
+# queue !\
 # udpsink  host=${HOST}  port=${SRTPORT}
 
 ###############################################################################
@@ -56,7 +56,7 @@ SRTPORT=5005
 # subparse !\
 # queue !\
 # rtpgstpay pt=98 !\
-# udpsink host=${HOST} port=${SRTPORT}
+# udpsink host=${HOST} port=${SRTPORT} qos=true
 
 ###############################################################################
 ###############################################################################
@@ -66,20 +66,20 @@ SRTPORT=5005
 
 # --gst-debug=*:1 --gst-debug=GST_CAPS:4 \
 
-gst-launch-1.0  -e \
+gst-launch-1.0 -e \
 filesrc location=OutputVideo1920p_yuv420p.mp4 !\
 decodebin !\
 nvvidconv !\
 x264enc !\
 queue !\
 rtph264pay pt=96 !\
-udpsink host=${HOST}  port=${PORT} stream-id="stream_id" \
+udpsink host=${HOST}  port=${PORT} \
 \
 filesrc do-timestamp=true location=OutputVideo1920p_yuv420p.srt !\
 subparse !\
 queue !\
 rtpgstpay pt=98 !\
-udpsink host=${HOST} port=${SRTPORT} stream-id="stream_id"
+udpsink host=${HOST} port=${SRTPORT} qos=true
 
 
 ###############################################################################

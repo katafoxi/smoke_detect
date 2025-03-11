@@ -125,10 +125,44 @@ SRTPORT=5005
 ###############################################################################
 ###############################################################################
 ###############################################################################
+#YES VERY BAD
+# 2UDP-> uVID + uSRT
+
+# gst-launch-1.0 -e \
+# textoverlay name=overlay font-desc="Sans, 62" !\
+# autovideosink sync=true \
+# \
+# udpsrc name=VID_udp_stream port=${PORT} \
+#     caps="application/x-rtp, \
+#         encoding-name=H264, \
+#         media=video, \
+#         clock-rate=(int)90000, \
+#         payload=(int)96 " !\
+# rtph264depay !\
+# h264parse !\
+# decodebin !\
+# nvvidconv ! video/x-raw,framerate=30/1,width=512,height=266 !\
+# overlay.video_sink \
+# \
+# udpsrc name=SRT_udp_stream \
+#     address=${HOST} port=${SRTPORT} \
+#     do-timestamp=true \
+#     caps="application/x-rtp, \
+#         encoding-name=X-GST, \
+#         media=application, \
+#         payload=(int)98 " !\
+# rtpjitterbuffer !\
+# queue !\
+# rtpgstdepay name=gstdepay !\
+# overlay.text_sink
+
+###############################################################################
+###############################################################################
+###############################################################################
 #NO
 # 2UDP-> uVID + uSRT
 
-gst-launch-1.0 -e \
+gst-launch-1.0  \
 textoverlay name=overlay font-desc="Sans, 62" !\
 autovideosink sync=false \
 \
@@ -138,14 +172,23 @@ udpsrc name=VID_udp_stream port=${PORT} \
         media=video, \
         clock-rate=(int)90000, \
         payload=(int)96 " !\
+rtpjitterbuffer !\
 rtph264depay !\
+queue !\
 h264parse !\
 decodebin !\
 nvvidconv ! video/x-raw,framerate=30/1,width=512,height=266 !\
 overlay.video_sink \
 \
-filesrc location=OutputVideo1920p_yuv420p.srt !\
-subparse !\
+udpsrc name=SRT_udp_stream \
+    address=${HOST} port=${SRTPORT} \
+    do-timestamp=true \
+    caps="application/x-rtp, \
+        encoding-name=X-GST, \
+        media=application, \
+        payload=(int)98 " !\
+rtpgstdepay name=gstdepay !\
+queue !\
 overlay.text_sink
 ###############################################################################
 ###############################################################################
@@ -234,7 +277,7 @@ overlay.text_sink
 # \
 # udpsrc port=${SRTPORT} \
 #     caps="application/x-rtp, \
-#         media=(string)text, \
+#         media=(string)text, \false
 #         encoding-name=(string)X-GST, \
 #         payload=(int)98" !\
 # rtpbin.recv_rtp_sink_1 \
