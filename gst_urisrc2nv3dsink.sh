@@ -1,7 +1,29 @@
 #!/bin/bash
+
+HOST=127.0.0.1
+PORT=5000
+SRTPORT=5005
+
+VID_RTP_=5010
+VID_RTCP=5011
+VID_RTCP_LISTEN=5015
+
+AUD_RTP_=5020
+AUD_RTCP=5021
+AUD_RTCP_LISTEN=5025
+
+SRT_RTP_=5030
+SRT_RTCP=5031
+SRT_RTCP_LISTEN=5035
+
+FILENAME="0402_2"
+VID_FORMAT="MP4"
+VID_FILE="${FILENAME}.MP4"
+SRT_FILE="./streams/${FILENAME}.srt"
+
 gst-launch-1.0 \
 uridecodebin \
-    uri="file:///wdir/smoke_detect/streams/OutputVideo1920p_yuv420p.mp4" \
+    uri="file:///wdir/smoke_detect/streams/${FILENAME}.${VID_FORMAT}" \
     name=dec !\
 m.sink_0 nvstreammux \
 	name=m \
