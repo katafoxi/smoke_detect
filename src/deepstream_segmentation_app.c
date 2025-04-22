@@ -45,7 +45,6 @@
 #define MAPPING "/ridgerun"
 #define SERVICE "12345"
 
-
 static gboolean PERF_MODE = FALSE;
 
 /* tiler_sink_pad_buffer_probe  will extract metadata received on
@@ -240,6 +239,7 @@ int main(int argc, char *argv[])
       *tiler = NULL,
       *encoder = NULL,
       *payloader = NULL,
+      *text_src = NULL,
       *sink = NULL;
 
   GstBus *bus = NULL;
@@ -445,7 +445,6 @@ int main(int argc, char *argv[])
                "qos", 1,
                NULL);
 
-
   //==========
   // NVVIDCONV
   //==========
@@ -461,7 +460,6 @@ int main(int argc, char *argv[])
     return -1;
   }
 
-          
   //==========
   // TEXTOVERLAY
   //==========
@@ -472,13 +470,12 @@ int main(int argc, char *argv[])
     g_printerr("TEXTOVERLAY element could not be created. Exiting.\n");
     return -1;
   }
-  g_object_set(textoverlay, 
-    "text", "Hello GStreamer!",
-    "valignment", 1,        // 1 = top alignment
-    "halignment", 1,        // 1 = left alignment
-    "font-desc", "Sans 72", // Font description
-    NULL);
-        
+  g_object_set(textoverlay,
+               "valignment", 1,        // 1 = top alignment
+               "halignment", 1,        // 1 = left alignment
+               "font-desc", "Sans 20", // Font description
+               NULL);
+  // "text", "Hello GStreamer!",
 
   //==========
   // TILER
@@ -552,6 +549,17 @@ int main(int argc, char *argv[])
                "async", FALSE,
                NULL);
 
+  //==========
+  // SRTSRC mysrc plugin
+  //==========
+
+  text_src = gst_element_factory_make("mysrc", "text-source");
+  if (!text_src)
+  {
+    g_printerr("text_src element could not be created. Exiting.\n");
+    return -1;
+  }
+
   //-------------------------------------------
 
   // sink = gst_element_factory_make("udpsink", "sink");
@@ -579,6 +587,7 @@ int main(int argc, char *argv[])
                    nvsegvisual,
                    nvdsosd,
                    nvvidconv,
+                   text_src,
                    textoverlay,
                    sink, NULL);
 
@@ -592,55 +601,79 @@ int main(int argc, char *argv[])
   //   payloader,
   //   sink, NULL);
 
-  /* Link the elements together*/
-  // ############################################ old
-  // if (!gst_element_link_many(
-  //         streammux,
-  //         pgie,
-  //         nvsegvisual,
-  //         nvdsosd,
-  //         textoverlay,
-  //         nvvidconv,
-  //         sink, NULL))
+  /* Link the elements together with error checking for each link */
+  // if (!gst_element_link(streammux, pgie))
   // {
-  //   g_printerr("Elements could not be linked. Exiting.\n");
+  //   g_printerr("Failed to link streammux -> pgie. Exiting.\n");
   //   return -1;
   // }
-  // ###############################################
 
-  /* Link the elements together with error checking for each link */
-  if (!gst_element_link(streammux, pgie)) {
-    g_printerr("Failed to link streammux -> pgie. Exiting.\n");
+  // if (!gst_element_link(pgie, nvsegvisual))
+  // {
+  //   g_printerr("Failed to link pgie -> nvsegvisual. Exiting.\n");
+  //   return -1;
+  // }
+
+  // if (!gst_element_link(nvsegvisual, nvdsosd))
+  // {
+  //   g_printerr("Failed to link nvsegvisual -> nvdsosd. Exiting.\n");
+  //   return -1;
+  // }
+
+  // if (!gst_element_link(nvdsosd, nvvidconv))
+  // {
+  //   g_printerr("Failed to link nvdsosd -> nvvidconv. Exiting.\n");
+  //   return -1;
+  // }
+
+  // if (!gst_element_link(nvvidconv, textoverlay))
+  // {
+  //   g_printerr("Failed to link nvvidconv -> textoverlay  . Exiting.\n");
+  //   return -1;
+  // }
+
+  // if (!gst_element_link(textoverlay, sink))
+  // {
+  //   g_printerr("Failed to link nvvidconv -> sink. Exiting.\n");
+  //   return -1;
+  // }
+
+#define LINK_ELEMENTS(a, b)                                                                      \
+  if (!gst_element_link(a, b))                                                                   \
+  {                                                                                              \
+    g_printerr("Failed to link %s -> %s. Exiting.\n", GST_ELEMENT_NAME(a), GST_ELEMENT_NAME(b)); \
+    return -1;                                                                                   \
+  }
+
+  /* Link the elements together with error checking */
+  LINK_ELEMENTS(streammux, pgie);
+  LINK_ELEMENTS(pgie, nvsegvisual);
+  LINK_ELEMENTS(nvsegvisual, nvdsosd);
+  LINK_ELEMENTS(nvdsosd, nvvidconv);
+  LINK_ELEMENTS(nvvidconv, textoverlay);
+  LINK_ELEMENTS(textoverlay, sink);
+
+#undef LINK_ELEMENTS
+
+  // Ручное соединение text_src → textoverlay (текст-вход)
+  GstPad *text_src_pad = gst_element_get_static_pad(text_src, "src");
+  GstPad *text_sink_pad = gst_element_get_static_pad(textoverlay, "text_sink");
+
+  if (!text_src_pad || !text_sink_pad)
+  {
+    g_printerr("Не найдены pad'ы для текстового соединения!\n");
+    gst_object_unref(pipeline);
+    return -1;
+  }
+  if (gst_pad_link(text_src_pad, text_sink_pad) != GST_PAD_LINK_OK)
+  {
+    g_printerr("Не удалось соединить текст-источник с textoverlay!\n");
+    gst_object_unref(pipeline);
     return -1;
   }
 
-  if (!gst_element_link(pgie, nvsegvisual)) {
-    g_printerr("Failed to link pgie -> nvsegvisual. Exiting.\n");
-    return -1;
-  }
-
-  if (!gst_element_link(nvsegvisual, nvdsosd)) {
-    g_printerr("Failed to link nvsegvisual -> nvdsosd. Exiting.\n");
-    return -1;
-  }
-
-  if (!gst_element_link(nvdsosd, nvvidconv)) {
-    g_printerr("Failed to link nvdsosd -> nvvidconv. Exiting.\n");
-    return -1;
-  }
-
-  if (!gst_element_link(nvvidconv, textoverlay)) {
-    g_printerr("Failed to link nvvidconv -> textoverlay  . Exiting.\n");
-    return -1;
-  }
-
-  if (!gst_element_link(textoverlay, sink)) {
-    g_printerr("Failed to link nvvidconv -> sink. Exiting.\n");
-    return -1;
-  }
-
-
-
+  gst_object_unref(text_src_pad);
+  gst_object_unref(text_sink_pad);
 
   /* Lets add probe to get informed of the meta data generated, we add probe to
    * the sink pad of the osd element, since by that time, the buffer would have
