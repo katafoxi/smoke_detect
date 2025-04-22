@@ -9,3 +9,5 @@ src/*segmentation-custom
 *.pdf
 *.mp4
 *_app
+del*
+
