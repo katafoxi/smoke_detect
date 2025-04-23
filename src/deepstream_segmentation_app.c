@@ -236,10 +236,10 @@ int main(int argc, char *argv[])
       *nvsegvisual = NULL,
       *nvdsosd = NULL,
       *textoverlay = NULL,
-      *tiler = NULL,
-      *encoder = NULL,
-      *payloader = NULL,
       *text_src = NULL,
+      *tee = NULL,
+      *queue = NULL,
+      *valve = NULL,
       *sink = NULL;
 
   GstBus *bus = NULL;
@@ -475,56 +475,16 @@ int main(int argc, char *argv[])
                "halignment", 1,        // 1 = left alignment
                "font-desc", "Sans 20", // Font description
                NULL);
-  // "text", "Hello GStreamer!",
+
 
   //==========
-  // TILER
+  // SRTSRC mysrc plugin
   //==========
 
-  /* Use nvtiler to composite the batched frames into a 2D tiled array based
-   * on the source of the frames. */
-  tiler = gst_element_factory_make("nvmultistreamtiler", "nvtiler");
-  if (!tiler)
+  text_src = gst_element_factory_make("mysrc", "text-source");
+  if (!text_src)
   {
-    g_printerr("TILER element could not be created. Exiting.\n");
-    return -1;
-  }
-
-  tiler_rows = (guint)sqrt(num_sources);
-  tiler_columns = (guint)ceil(1.0 * num_sources / tiler_rows);
-  /* we set the tiler properties here */
-  g_object_set(G_OBJECT(tiler),
-               "rows", tiler_rows,
-               "columns", tiler_columns,
-               "width", TILED_OUTPUT_WIDTH,
-               "height", TILED_OUTPUT_HEIGHT,
-               NULL);
-
-  // //==========
-  // // ENCODER
-  // //==========
-  encoder = gst_element_factory_make("x264enc", "h264-encoder");
-  if (!encoder)
-  {
-    g_printerr("Encoder x264enc element could not be created. Exiting.\n");
-    return -1;
-  }
-  // Jetson Orin Nano не включает в себя аппаратные блоки для кодирования видео, поэтому вы не можете использовать nvv4l2h264enc.
-  // https://forums.developer.nvidia.com/t/nvv4l2h264enc-plugin-not-working-on-jetson-orin-nano/271486/2
-
-  g_object_set(encoder,
-               "bitrate", 2000000, // Битрейт 2 Мбит/с
-               "tune", 0x00000004, // zero latency
-               "speed-preset", 5,
-               NULL);
-
-  // //==========
-  // // PAYLOADER
-  // //==========
-  payloader = gst_element_factory_make("rtph264pay", "rtp-payloader");
-  if (!payloader)
-  {
-    g_printerr("payloader element could not be created. Exiting.\n");
+    g_printerr("text_src element could not be created. Exiting.\n");
     return -1;
   }
 
@@ -548,17 +508,6 @@ int main(int argc, char *argv[])
   g_object_set(G_OBJECT(sink),
                "async", FALSE,
                NULL);
-
-  //==========
-  // SRTSRC mysrc plugin
-  //==========
-
-  text_src = gst_element_factory_make("mysrc", "text-source");
-  if (!text_src)
-  {
-    g_printerr("text_src element could not be created. Exiting.\n");
-    return -1;
-  }
 
   //-------------------------------------------
 
