@@ -241,6 +241,7 @@ int main(int argc, char *argv[])
       *queue1 = NULL,
       *queue2 = NULL,
       *valve = NULL,
+      *filesink = NULL,
       *sink = NULL;
 
   GstBus *bus = NULL;
@@ -507,6 +508,7 @@ int main(int argc, char *argv[])
     return -1;
   }
 
+
   //==========
   // SRTSRC mysrc plugin
   //==========
@@ -538,6 +540,17 @@ int main(int argc, char *argv[])
   g_object_set(G_OBJECT(sink),
                "async", FALSE,
                NULL);
+
+  //==========
+  // FILESINK
+  //==========
+
+  filesink = gst_element_factory_make("filesink", "sink2");
+  if (!filesink)
+  {
+    g_printerr("FILESINK element could not be created. Exiting.\n");
+    return -1;
+  }
 
   //-------------------------------------------
 
