@@ -580,6 +580,7 @@ int main(int argc, char *argv[])
                    nvvidconv,
                    text_src,
                    textoverlay,
+                   queue1,
                    sink, NULL);
 
 #define LINK_ELEMENTS(a, b)                                                                      \
@@ -595,7 +596,8 @@ int main(int argc, char *argv[])
   LINK_ELEMENTS(nvsegvisual, nvdsosd);
   LINK_ELEMENTS(nvdsosd, nvvidconv);
   LINK_ELEMENTS(nvvidconv, textoverlay);
-  LINK_ELEMENTS(textoverlay, sink);
+  LINK_ELEMENTS(textoverlay, queue1);
+  LINK_ELEMENTS(queue1, sink);
 
 #undef LINK_ELEMENTS
 
