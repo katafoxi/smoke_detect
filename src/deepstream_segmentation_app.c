@@ -238,7 +238,8 @@ int main(int argc, char *argv[])
       *textoverlay = NULL,
       *text_src = NULL,
       *tee = NULL,
-      *queue = NULL,
+      *queue1 = NULL,
+      *queue2 = NULL,
       *valve = NULL,
       *sink = NULL;
 
@@ -475,6 +476,28 @@ int main(int argc, char *argv[])
                "halignment", 1,        // 1 = left alignment
                "font-desc", "Sans 20", // Font description
                NULL);
+
+
+  //==========
+  // TEE
+  //==========
+    tee = gst_element_factory_make("tee", "tee");
+    if (!tee)
+    {
+      g_printerr("TEE element could not be created. Exiting.\n");
+      return -1;
+    }
+
+
+  //==========
+  // QUEUE
+  //==========
+
+
+
+  //==========
+  // VALVE
+  //==========
 
 
   //==========
