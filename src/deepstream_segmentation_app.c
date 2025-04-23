@@ -508,7 +508,6 @@ int main(int argc, char *argv[])
     return -1;
   }
 
-
   //==========
   // SRTSRC mysrc plugin
   //==========
@@ -582,53 +581,6 @@ int main(int argc, char *argv[])
                    text_src,
                    textoverlay,
                    sink, NULL);
-
-  // gst_bin_add_many (GST_BIN (pipeline),
-  //   pgie,
-  //   nvsegvisual,
-  //   tiler,
-  //   nvdsosd,
-  //   nvvidconv,
-  //   encoder,
-  //   payloader,
-  //   sink, NULL);
-
-  /* Link the elements together with error checking for each link */
-  // if (!gst_element_link(streammux, pgie))
-  // {
-  //   g_printerr("Failed to link streammux -> pgie. Exiting.\n");
-  //   return -1;
-  // }
-
-  // if (!gst_element_link(pgie, nvsegvisual))
-  // {
-  //   g_printerr("Failed to link pgie -> nvsegvisual. Exiting.\n");
-  //   return -1;
-  // }
-
-  // if (!gst_element_link(nvsegvisual, nvdsosd))
-  // {
-  //   g_printerr("Failed to link nvsegvisual -> nvdsosd. Exiting.\n");
-  //   return -1;
-  // }
-
-  // if (!gst_element_link(nvdsosd, nvvidconv))
-  // {
-  //   g_printerr("Failed to link nvdsosd -> nvvidconv. Exiting.\n");
-  //   return -1;
-  // }
-
-  // if (!gst_element_link(nvvidconv, textoverlay))
-  // {
-  //   g_printerr("Failed to link nvvidconv -> textoverlay  . Exiting.\n");
-  //   return -1;
-  // }
-
-  // if (!gst_element_link(textoverlay, sink))
-  // {
-  //   g_printerr("Failed to link nvvidconv -> sink. Exiting.\n");
-  //   return -1;
-  // }
 
 #define LINK_ELEMENTS(a, b)                                                                      \
   if (!gst_element_link(a, b))                                                                   \
