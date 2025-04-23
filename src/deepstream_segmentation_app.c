@@ -477,17 +477,15 @@ int main(int argc, char *argv[])
                "font-desc", "Sans 20", // Font description
                NULL);
 
-
   //==========
   // TEE
   //==========
-    tee = gst_element_factory_make("tee", "tee");
-    if (!tee)
-    {
-      g_printerr("TEE element could not be created. Exiting.\n");
-      return -1;
-    }
-
+  tee = gst_element_factory_make("tee", "tee");
+  if (!tee)
+  {
+    g_printerr("TEE element could not be created. Exiting.\n");
+    return -1;
+  }
 
   //==========
   // QUEUE
@@ -499,11 +497,15 @@ int main(int argc, char *argv[])
     return -1;
   }
 
-
   //==========
   // VALVE
   //==========
-
+  valve = gst_element_factory_make("valve", "valve");
+  if (!valve)
+  {
+    g_printerr("valve element could not be created. Exiting. \n");
+    return -1;
+  }
 
   //==========
   // SRTSRC mysrc plugin
