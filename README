@@ -1,0 +1,20 @@
+# Сборка
+
+Через makefile
+
+```bash
+cd src
+make
+```
+Если собирать через `make` то в запускающем скрипте `segm_app_up.sh` исправить путь до собранного приложения на
+```bash
+ /wdir/smoke_detect/src/segmsmoke_app
+```
+---
+
+Через meson. Все артефакты сборки отделены от исходного кода.
+```bash
+cd build
+meson ..
+ninja
+```
