@@ -550,6 +550,8 @@ int main(int argc, char *argv[])
     g_printerr("FILESINK element could not be created. Exiting.\n");
     return -1;
   }
+  // Настройка файлового вывода
+  g_object_set(filesink, "location", "output.mp4", NULL);
 
   //-------------------------------------------
 
