@@ -492,7 +492,12 @@ int main(int argc, char *argv[])
   //==========
   // QUEUE
   //==========
-
+  queue1 = gst_element_factory_make("queue", "queue1");
+  if (!queue1)
+  {
+    g_printerr("queue1 element could not be created. Exiting.\n");
+    return -1;
+  }
 
 
   //==========
