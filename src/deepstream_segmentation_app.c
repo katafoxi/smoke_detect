@@ -489,7 +489,7 @@ int main(int argc, char *argv[])
   }
 
   //==========
-  // QUEUE
+  // QUEUE1
   //==========
   queue1 = gst_element_factory_make("queue", "queue1");
   if (!queue1)
@@ -505,6 +505,16 @@ int main(int argc, char *argv[])
   if (!valve)
   {
     g_printerr("valve element could not be created. Exiting. \n");
+    return -1;
+  }
+
+  //==========
+  // QUEUE2
+  //==========
+  queue2 = gst_element_factory_make("queue", "queue2");
+  if (!queue2)
+  {
+    g_printerr("queue2 element could not be created. Exiting.\n");
     return -1;
   }
 
