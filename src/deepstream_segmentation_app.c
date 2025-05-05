@@ -45,15 +45,15 @@
 // #define MAPPING "/ridgerun"
 // #define SERVICE "12345"
 
-static gboolean PERF_MODE = FALSE;
+// static gboolean PERF_MODE = FALSE;
 
 /* tiler_sink_pad_buffer_probe  will extract metadata received on
    segmentation  src pad */
 static GstPadProbeReturn
 tiler_src_pad_buffer_probe(
-    GstPad *pad,
+    GstPad *pad G_GNUC_UNUSED,
     GstPadProbeInfo *info,
-    gpointer u_data)
+    gpointer u_data G_GNUC_UNUSED)
 {
   GstBuffer *buf = (GstBuffer *)info->data;
   NvDsMetaList *l_frame = NULL;
@@ -68,7 +68,7 @@ tiler_src_pad_buffer_probe(
 }
 
 static gboolean
-bus_call(GstBus *bus, GstMessage *msg, gpointer data)
+bus_call(GstBus *bus G_GNUC_UNUSED, GstMessage *msg, gpointer data)
 {
   GMainLoop *loop = (GMainLoop *)data;
   switch (GST_MESSAGE_TYPE(msg))
@@ -125,7 +125,7 @@ bus_call(GstBus *bus, GstMessage *msg, gpointer data)
 
 static void
 cb_newpad(
-    GstElement *decodebin,
+    GstElement *decodebin G_GNUC_UNUSED,
     GstPad *decoder_src_pad,
     gpointer data)
 {
@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
   guint bus_watch_id;
   GstPad *tiler_src_pad = NULL;
   guint i, num_sources = 0;
-  guint tiler_rows, tiler_columns;
+  // guint tiler_rows, tiler_columns;
   guint pgie_batch_size;
   gboolean is_nvinfer_server = FALSE;
   gchar *infer_config_file = NULL;
