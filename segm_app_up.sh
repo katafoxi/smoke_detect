@@ -1,8 +1,9 @@
 #!/bin/bash
 
 GPS_TO_SRT_PLUGIN_PATH="/wdir/gps_parse_plugin/builddir/plugin/"
-export GST_PLUGIN_SYSTEM_PATH_1_0="/lib/aarch64-linux-gnu/gstreamer-1.0:${GPS_TO_SRT_PLUGIN_PATH}"
-export GST_PLUGIN_PATH="/lib/aarch64-linux-gnu/gstreamer-1.0:${GPS_TO_SRT_PLUGIN_PATH}"
+DEEPSTREAM_PLUGIN_PATH="/opt/nvidia/deepstream/deepstream-6.0/lib/gst-plugins"
+export GST_PLUGIN_SYSTEM_PATH_1_0="/lib/aarch64-linux-gnu/gstreamer-1.0:${GPS_TO_SRT_PLUGIN_PATH}:${DEEPSTREAM_PLUGIN_PATH}"
+export GST_PLUGIN_PATH="/lib/aarch64-linux-gnu/gstreamer-1.0:${GPS_TO_SRT_PLUGIN_PATH}:${DEEPSTREAM_PLUGIN_PATH}"
 
 echo "$GST_PLUGIN_SYSTEM_PATH_1_0"
 
