@@ -113,6 +113,8 @@ bus_call(GstBus *bus G_GNUC_UNUSED, GstMessage *msg, gpointer data)
       if (gst_nvmessage_parse_stream_eos(msg, &stream_id))
       {
         g_print("Got EOS from stream %d\n", stream_id);
+        usleep(2000000);
+        g_main_loop_quit(loop);
       }
     }
     break;
