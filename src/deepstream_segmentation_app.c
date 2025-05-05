@@ -42,8 +42,8 @@
  * pads having this capability will push GstBuffers containing cuda buffers. */
 #define GST_CAPS_FEATURES_NVMM "memory:NVMM"
 
-#define MAPPING "/ridgerun"
-#define SERVICE "12345"
+// #define MAPPING "/ridgerun"
+// #define SERVICE "12345"
 
 static gboolean PERF_MODE = FALSE;
 
@@ -129,7 +129,6 @@ cb_newpad(
     GstPad *decoder_src_pad,
     gpointer data)
 {
-
   GstCaps *caps = gst_pad_get_current_caps(decoder_src_pad);
   if (!caps)
   {
@@ -140,29 +139,30 @@ cb_newpad(
   GstElement *source_bin = (GstElement *)data;
   GstCapsFeatures *features = gst_caps_get_features(caps, 0);
 
-  /* Need to check if the pad created by the decodebin is for video and not
-   * audio. */
   if (!strncmp(name, "video", 5))
   {
-    /* Link the decodebin pad only if decodebin has picked nvidia
-     * decoder plugin nvdec_*. We do this by checking if the pad caps contain
-     * NVMM memory features. */
     if (gst_caps_features_contains(features, GST_CAPS_FEATURES_NVMM))
     {
-      /* Get the source bin ghost pad */
       GstPad *bin_ghost_pad = gst_element_get_static_pad(source_bin, "src");
-      if (!gst_ghost_pad_set_target(GST_GHOST_PAD(bin_ghost_pad),
-                                    decoder_src_pad))
+      if (!bin_ghost_pad)
       {
-        g_printerr("Failed to link decoder src pad to source bin ghost pad\n");
+        g_printerr("Failed to get ghost pad\n");
+        gst_caps_unref(caps);
+        return;
+      }
+
+      if (!gst_ghost_pad_set_target(GST_GHOST_PAD(bin_ghost_pad), decoder_src_pad))
+      {
+        g_printerr("Failed to link decoder src pad\n");
       }
       gst_object_unref(bin_ghost_pad);
     }
     else
     {
-      g_printerr("Error: Decodebin did not pick nvidia decoder plugin.\n");
+      g_printerr("Error: NVMM feature not found\n");
     }
   }
+  gst_caps_unref(caps); // Устранение утечки
 }
 
 static GstElement *
@@ -171,7 +171,7 @@ create_source_bin(guint index, gchar *uri)
   GstElement
       *bin = NULL,
       *uri_decode_bin = NULL;
-  gchar bin_name[16] = {};
+  gchar bin_name[16] = {0};
 
   int current_device = -1;
   cudaGetDevice(&current_device);
@@ -189,33 +189,37 @@ create_source_bin(guint index, gchar *uri)
   uri_decode_bin = gst_element_factory_make("uridecodebin", "uri-decode-bin");
   if (!bin || !uri_decode_bin)
   {
+    if (bin)
+      gst_object_unref(bin); // Если uri_decode_bin не создастся, функция вернёт NULL, но bin уже создан и не уничтожается.
     g_printerr("One element in source bin could not be created.\n");
     return NULL;
   }
-  g_object_set(G_OBJECT(uri_decode_bin),
-               "uri", uri, NULL);
-  g_signal_connect(
-      G_OBJECT(uri_decode_bin),
-      "pad-added",
-      G_CALLBACK(cb_newpad),
-      bin);
+  g_object_set(G_OBJECT(uri_decode_bin), "uri", uri, NULL);
+  g_signal_connect(G_OBJECT(uri_decode_bin), "pad-added", G_CALLBACK(cb_newpad), bin);
   // add uri_decode_bin to common bin
-  gst_bin_add(GST_BIN(bin),
-              uri_decode_bin);
+  gst_bin_add(GST_BIN(bin), uri_decode_bin);
 
   /* We need to create a ghost pad for the source bin which will act as a proxy
    * for the video decoder src pad. The ghost pad will not have a target right
    * now. Once the decode bin creates the video decoder and generates the
    * cb_newpad callback, we will set the ghost pad target to the video decoder
    * src pad. */
-  if (!gst_element_add_pad(bin, gst_ghost_pad_new_no_target("src",
-                                                            GST_PAD_SRC)))
+  if (!gst_element_add_pad(bin, gst_ghost_pad_new_no_target("src", GST_PAD_SRC)))
   {
     g_printerr("Failed to add ghost pad in source bin\n");
     return NULL;
   }
 
   return bin;
+}
+
+
+// Динамическое управление valve через 5 секунд
+static gboolean close_valve(gpointer valve)
+{
+  g_print("Closing valve...\n");
+  g_object_set(valve, "drop", TRUE, NULL);
+  return G_SOURCE_REMOVE;
 }
 
 static void
@@ -257,6 +261,21 @@ int main(int argc, char *argv[])
   cudaGetDevice(&current_device);
   struct cudaDeviceProp prop;
   cudaGetDeviceProperties(&prop, current_device);
+
+  // Проверка ошибок CUDA
+  cudaError_t cuda_status = cudaGetDevice(&current_device);
+  if (cuda_status != cudaSuccess)
+  {
+    g_printerr("CUDA error: %s\n", cudaGetErrorString(cuda_status));
+    return -1;
+  }
+
+  cuda_status = cudaGetDeviceProperties(&prop, current_device);
+  if (cuda_status != cudaSuccess)
+  {
+    g_printerr("CUDA error: %s\n", cudaGetErrorString(cuda_status));
+    return -1;
+  }
 
   //===========================================================================
   /* Check input arguments */
@@ -324,7 +343,7 @@ int main(int argc, char *argv[])
   for (i = 0; i < num_sources; i++)
   {
     GstPad *sinkpad, *srcpad;
-    gchar pad_name[16] = {};
+    gchar pad_name[16] = {0};
     GstElement *source_bin = NULL;
 
     if (is_nvinfer_server)
@@ -546,6 +565,12 @@ int main(int argc, char *argv[])
 #endif
   }
 
+  if (!sink)
+  {
+    g_printerr("SINK element could not be created. Exiting.\n");
+    return -1;
+  }
+
   g_object_set(G_OBJECT(sink),
                "async", FALSE,
                NULL);
@@ -592,8 +617,12 @@ int main(int argc, char *argv[])
                    nvvidconv,
                    text_src,
                    textoverlay,
+                   tee,
                    queue1,
-                   sink, NULL);
+                   valve,
+                   queue2,
+                   sink,
+                   filesink, NULL);
 
 #define LINK_ELEMENTS(a, b)                                                                      \
   if (!gst_element_link(a, b))                                                                   \
@@ -608,7 +637,11 @@ int main(int argc, char *argv[])
   LINK_ELEMENTS(nvsegvisual, nvdsosd);
   LINK_ELEMENTS(nvdsosd, nvvidconv);
   LINK_ELEMENTS(nvvidconv, textoverlay);
-  LINK_ELEMENTS(textoverlay, queue1);
+  LINK_ELEMENTS(textoverlay, tee);
+  LINK_ELEMENTS(tee, queue1);
+  LINK_ELEMENTS(tee, queue2);
+  LINK_ELEMENTS(queue2, valve);
+  LINK_ELEMENTS(valve, filesink);
   LINK_ELEMENTS(queue1, sink);
 
 #undef LINK_ELEMENTS
@@ -629,6 +662,7 @@ int main(int argc, char *argv[])
     gst_object_unref(pipeline);
     return -1;
   }
+  g_print("Link text_src_pad to textoverlay\n");
 
   gst_object_unref(text_src_pad);
   gst_object_unref(text_sink_pad);
@@ -648,6 +682,9 @@ int main(int argc, char *argv[])
   /* Set the pipeline to "playing" state */
   g_print("Now playing...\n");
   gst_element_set_state(pipeline, GST_STATE_PLAYING);
+
+  // Исправление передачи аргумента в close_valve
+  g_timeout_add_seconds(5, (GSourceFunc)close_valve, valve);
 
   /* Wait till pipeline encounters an error or EOS */
   g_print("Running...\n");
