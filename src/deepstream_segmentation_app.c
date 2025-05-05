@@ -247,6 +247,7 @@ int main(int argc, char *argv[])
       *queue1 = NULL,
       *queue2 = NULL,
       *valve = NULL,
+      *x264enc = NULL,
       *filesink = NULL,
       *sink = NULL;
 
@@ -413,8 +414,7 @@ int main(int argc, char *argv[])
   }
 
   /* Override the batch-size set in the config file with the number of sources. */
-  g_object_get(G_OBJECT(pgie),
-               "batch-size", &pgie_batch_size, NULL);
+  g_object_get(G_OBJECT(pgie), "batch-size", &pgie_batch_size, NULL);
 
   if (pgie_batch_size != num_sources && !is_nvinfer_server)
   {
@@ -577,9 +577,20 @@ int main(int argc, char *argv[])
                "async", FALSE,
                NULL);
 
+
+  
+
   //==========
   // FILESINK
   //==========
+
+  x264enc = gst_element_factory_make("x264enc", "x264enc");
+  if (!x264enc)
+  {
+    g_printerr("x264enc element could not be created. Exiting.\n");
+    return -1;
+  }
+  g_object_set(x264enc, "tune", 4, NULL );
 
   filesink = gst_element_factory_make("filesink", "sink2");
   if (!filesink)
@@ -624,6 +635,7 @@ int main(int argc, char *argv[])
                    valve,
                    queue2,
                    sink,
+                   x264enc,
                    filesink, NULL);
 
 #define LINK_ELEMENTS(a, b)                                                                      \
@@ -640,11 +652,14 @@ int main(int argc, char *argv[])
   LINK_ELEMENTS(nvdsosd, nvvidconv);
   LINK_ELEMENTS(nvvidconv, textoverlay);
   LINK_ELEMENTS(textoverlay, tee);
+  
   LINK_ELEMENTS(tee, queue1);
+  LINK_ELEMENTS(queue1, sink);
+
   LINK_ELEMENTS(tee, queue2);
   LINK_ELEMENTS(queue2, valve);
-  LINK_ELEMENTS(valve, filesink);
-  LINK_ELEMENTS(queue1, sink);
+  LINK_ELEMENTS(valve, x264enc);
+  LINK_ELEMENTS(x264enc, filesink);
 
 #undef LINK_ELEMENTS
 
