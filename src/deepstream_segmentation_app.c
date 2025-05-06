@@ -84,8 +84,7 @@ bus_call(GstBus *bus G_GNUC_UNUSED, GstMessage *msg, gpointer data)
     gchar *debug;
     GError *error;
     gst_message_parse_warning(msg, &error, &debug);
-    g_printerr("WARNING from element %s: %s\n",
-               GST_OBJECT_NAME(msg->src), error->message);
+    g_printerr("WARNING from element %s: %s\n", GST_OBJECT_NAME(msg->src), error->message);
     g_free(debug);
     g_printerr("Warning: %s\n", error->message);
     g_error_free(error);
@@ -267,12 +266,6 @@ int main(int argc, char *argv[])
 
   // Проверка ошибок CUDA
   cudaError_t cuda_status = cudaGetDevice(&current_device);
-  if (cuda_status != cudaSuccess)
-  {
-    g_printerr("CUDA error: %s\n", cudaGetErrorString(cuda_status));
-    return -1;
-  }
-
   cuda_status = cudaGetDeviceProperties(&prop, current_device);
   if (cuda_status != cudaSuccess)
   {
