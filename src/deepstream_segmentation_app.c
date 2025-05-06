@@ -42,6 +42,13 @@
  * pads having this capability will push GstBuffers containing cuda buffers. */
 #define GST_CAPS_FEATURES_NVMM "memory:NVMM"
 
+#define CREATE_ELEMENT(var, factory, name)              \
+  if (!(var = gst_element_factory_make(factory, name))) \
+  {                                                     \
+    g_printerr("Failed to create %s\n", name);          \
+    return -1;                                          \
+  }
+
 // #define MAPPING "/ridgerun"
 // #define SERVICE "12345"
 
@@ -214,7 +221,6 @@ create_source_bin(guint index, gchar *uri)
   return bin;
 }
 
-
 // Динамическое управление valve через 5 секунд
 static gboolean close_valve(gpointer valve)
 {
@@ -315,18 +321,9 @@ int main(int argc, char *argv[])
   /* Create Pipeline element that will form a connection of other elements */
   pipeline = gst_pipeline_new("smoke-segmentation-pipeline");
 
-  //==========
-  // Streammux
-  //==========
+
   /* Create nvstreammux instance to form batches from one or more sources. */
-  streammux = gst_element_factory_make("nvstreammux", "stream-muxer");
-
-  if (!pipeline || !streammux)
-  {
-    g_printerr("Streammux element could not be created. Exiting.\n");
-    return -1;
-  }
-
+  CREATE_ELEMENT(streammux, "nvstreammux", "stream-muxer");
   g_object_set(G_OBJECT(streammux),
                "batch-size", num_sources, NULL);
   g_object_set(G_OBJECT(streammux),
@@ -388,9 +385,7 @@ int main(int argc, char *argv[])
   //==========
 
   /* Use nvinfer to infer on batched frame. */
-  pgie = gst_element_factory_make(
-      is_nvinfer_server ? NVINFERSERVER_PLUGIN : NVINFER_PLUGIN,
-      "primary-nvinference-engine");
+  CREATE_ELEMENT(pgie, is_nvinfer_server ? NVINFERSERVER_PLUGIN : NVINFER_PLUGIN, "primary-nvinference-engine");
 
   /* Configure the nvinfer element using the nvinfer config file. */
   g_object_set(G_OBJECT(pgie),
@@ -399,12 +394,6 @@ int main(int argc, char *argv[])
                "infer-on-gie-id", 1,
                "infer-on-class-ids", "0:",
                NULL);
-
-  if (!pgie)
-  {
-    g_printerr("PGIE could not be created. Exiting.\n");
-    return -1;
-  }
 
   /* Override the batch-size set in the config file with the number of sources. */
   g_object_get(G_OBJECT(pgie), "batch-size", &pgie_batch_size, NULL);
@@ -417,16 +406,7 @@ int main(int argc, char *argv[])
                  "batch-size", num_sources, NULL);
   }
 
-  //==========
-  // NVSEGVISUAL
-  //==========
-  nvsegvisual = gst_element_factory_make("nvsegvisual", "nvsegvisual");
-  if (!nvsegvisual)
-  {
-    g_printerr("NVSEGVISUAL element could not be created. Exiting.\n");
-    return -1;
-  }
-
+  CREATE_ELEMENT(nvsegvisual, "nvsegvisual", "nvsegvisual");
   // https://forums.developer.nvidia.com/t/how-to-draw-masks-with-python/308209/9
   g_object_set(G_OBJECT(nvsegvisual),
                "batch-size", num_sources,
@@ -440,16 +420,7 @@ int main(int argc, char *argv[])
                "qos", 0,                    // [bool](0) обработка событий качества обслуживания
                NULL);
 
-  //==========
-  // NVDSOSD
-  //==========
-
-  nvdsosd = gst_element_factory_make("nvdsosd", "onscreendisplay");
-  if (!nvdsosd)
-  {
-    g_printerr("NVDSOSD element could not be created. Exiting.\n");
-    return -1;
-  }
+  CREATE_ELEMENT(nvdsosd, "nvdsosd", "onscreendisplay");
   g_object_set(G_OBJECT(nvdsosd),
                "display-clock", 1,
                "display-mask", 1,
@@ -461,87 +432,25 @@ int main(int argc, char *argv[])
                "qos", 1,
                NULL);
 
-  //==========
-  // NVVIDCONV
-  //==========
-  /* Use convertor to convert to appropriate format */
-  nvvidconv = gst_element_factory_make("nvvideoconvert", "nvvideo-converter");
-  // g_object_set(G_OBJECT(nvvidconv),
-  // "video/x-raw,format=NV12",
-  //   NULL);
-
-  if (!nvvidconv)
-  {
-    g_printerr("One element could not be created. Exiting.\n");
-    return -1;
-  }
-
-  //==========
-  // TEXTOVERLAY
-  //==========
-
-  textoverlay = gst_element_factory_make("textoverlay", "textoverlay");
-  if (!textoverlay)
-  {
-    g_printerr("TEXTOVERLAY element could not be created. Exiting.\n");
-    return -1;
-  }
+  CREATE_ELEMENT(nvvidconv, "nvvideoconvert", "nvvideo-converter");
+  CREATE_ELEMENT(textoverlay, "textoverlay", "textoverlay");
   g_object_set(textoverlay,
                "valignment", 1,        // 1 = top alignment
                "halignment", 1,        // 1 = left alignment
                "font-desc", "Sans 20", // Font description
                NULL);
 
-  //==========
-  // TEE
-  //==========
-  tee = gst_element_factory_make("tee", "tee");
-  if (!tee)
-  {
-    g_printerr("TEE element could not be created. Exiting.\n");
-    return -1;
-  }
+  CREATE_ELEMENT(tee, "tee", "tee");
+  CREATE_ELEMENT(queue1, "queue", "queue1");
+  CREATE_ELEMENT(valve, "valve", "valve");
+  CREATE_ELEMENT(queue2, "queue", "queue2");
+  CREATE_ELEMENT(text_src, "mysrc", "text-source");
+  CREATE_ELEMENT(x264enc, "x264enc", "x264enc");
+  g_object_set(x264enc, "tune", 4, NULL);
 
-  //==========
-  // QUEUE1
-  //==========
-  queue1 = gst_element_factory_make("queue", "queue1");
-  if (!queue1)
-  {
-    g_printerr("queue1 element could not be created. Exiting.\n");
-    return -1;
-  }
-
-  //==========
-  // VALVE
-  //==========
-  valve = gst_element_factory_make("valve", "valve");
-  if (!valve)
-  {
-    g_printerr("valve element could not be created. Exiting. \n");
-    return -1;
-  }
-
-  //==========
-  // QUEUE2
-  //==========
-  queue2 = gst_element_factory_make("queue", "queue2");
-  if (!queue2)
-  {
-    g_printerr("queue2 element could not be created. Exiting.\n");
-    return -1;
-  }
-
-  //==========
-  // SRTSRC mysrc plugin
-  //==========
-
-  text_src = gst_element_factory_make("mysrc", "text-source");
-  if (!text_src)
-  {
-    g_printerr("text_src element could not be created. Exiting.\n");
-    return -1;
-  }
+  CREATE_ELEMENT(filesink, "filesink", "sink2");
+  // Настройка файлового вывода
+  g_object_set(filesink, "location", "output.mp4", NULL);
 
   //==========
   // SINK
@@ -549,50 +458,18 @@ int main(int argc, char *argv[])
 
   if (prop.integrated)
   {
-    sink = gst_element_factory_make("nv3dsink", "nvvideo-renderer");
+    CREATE_ELEMENT(sink, "nv3dsink", "nvvideo-renderer");
   }
   else
   {
 #ifdef __aarch64__
-    sink = gst_element_factory_make("nv3dsink", "nvvideo-renderer");
+    CREATE_ELEMENT(sink, "nv3dsink", "nvvideo-renderer");
 #else
-    sink = gst_element_factory_make("nveglglessink", "nvvideo-renderer");
+    CREATE_ELEMENT(sink, "nveglglessink", "nvvideo-renderer");
 #endif
   }
 
-  if (!sink)
-  {
-    g_printerr("SINK element could not be created. Exiting.\n");
-    return -1;
-  }
-
-  g_object_set(G_OBJECT(sink),
-               "async", FALSE,
-               NULL);
-
-
-  
-
-  //==========
-  // FILESINK
-  //==========
-
-  x264enc = gst_element_factory_make("x264enc", "x264enc");
-  if (!x264enc)
-  {
-    g_printerr("x264enc element could not be created. Exiting.\n");
-    return -1;
-  }
-  g_object_set(x264enc, "tune", 4, NULL );
-
-  filesink = gst_element_factory_make("filesink", "sink2");
-  if (!filesink)
-  {
-    g_printerr("FILESINK element could not be created. Exiting.\n");
-    return -1;
-  }
-  // Настройка файлового вывода
-  g_object_set(filesink, "location", "output.mp4", NULL);
+  g_object_set(G_OBJECT(sink), "async", FALSE, NULL);
 
   //-------------------------------------------
 
@@ -645,7 +522,7 @@ int main(int argc, char *argv[])
   LINK_ELEMENTS(nvdsosd, nvvidconv);
   LINK_ELEMENTS(nvvidconv, textoverlay);
   LINK_ELEMENTS(textoverlay, tee);
-  
+
   LINK_ELEMENTS(tee, queue1);
   LINK_ELEMENTS(queue1, sink);
 
