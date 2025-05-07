@@ -236,6 +236,20 @@ usage(const char *bin)
   g_printerr("For nvinferserver, Usage: %s -t inferserver config_file <file1> [file2] ... [fileN]\n", bin);
 }
 
+static gboolean check_cuda_device()
+{
+  int current_device = -1;
+  cudaGetDevice(&current_device);
+  struct cudaDeviceProp deviceProp;
+  cudaGetDeviceProperties(&deviceProp, current_device);
+  if (deviceProp.computeMode == cudaComputeModeProhibited)
+  {
+    g_printerr("CUDA device is running in <Compute Mode Prohibited>. Exiting.\n");
+    return FALSE;
+  }
+  return TRUE;
+}
+
 int main(int argc, char *argv[])
 {
   GMainLoop *loop = NULL;
@@ -265,14 +279,15 @@ int main(int argc, char *argv[])
   gboolean is_nvinfer_server = FALSE;
   gchar *infer_config_file = NULL;
 
+  check_cuda_device();
   int current_device = -1;
   cudaGetDevice(&current_device);
   struct cudaDeviceProp prop;
   cudaGetDeviceProperties(&prop, current_device);
 
   // Проверка ошибок CUDA
-  cudaError_t cuda_status = cudaGetDevice(&current_device);
-  cuda_status = cudaGetDeviceProperties(&prop, current_device);
+  // cudaError_t cuda_status = cudaGetDevice(&current_device);
+  cudaError_t cuda_status = cudaGetDeviceProperties(&prop, current_device);
   if (cuda_status != cudaSuccess)
   {
     g_printerr("CUDA error: %s\n", cudaGetErrorString(cuda_status));
@@ -321,12 +336,10 @@ int main(int argc, char *argv[])
   /* Create Pipeline element that will form a connection of other elements */
   pipeline = gst_pipeline_new("smoke-segmentation-pipeline");
 
-
   /* Create nvstreammux instance to form batches from one or more sources. */
   CREATE_ELEMENT(streammux, "nvstreammux", "stream-muxer");
   g_object_set(G_OBJECT(streammux),
-               "batch-size", num_sources, NULL);
-  g_object_set(G_OBJECT(streammux),
+               "batch-size", num_sources,
                "width", MUXER_OUTPUT_WIDTH,
                "height", MUXER_OUTPUT_HEIGHT,
                "batched-push-timeout", MUXER_BATCH_TIMEOUT_USEC, NULL);
