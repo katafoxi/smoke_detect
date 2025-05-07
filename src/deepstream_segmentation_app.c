@@ -22,6 +22,7 @@
 #include "gstnvdsmeta.h"
 #include "nvds_yml_parser.h"
 #include "gst-nvmessage.h"
+#include <time.h> // Добавлено для nanosleep
 
 /* The muxer output resolution must be set if the input streams will be of
  * different resolution. The muxer will scale all the input frames to this
@@ -54,6 +55,15 @@
 
 // static gboolean PERF_MODE = FALSE;
 
+// Улучшенная функция задержки
+static void msleep(unsigned int ms) {
+  struct timespec ts = {
+      .tv_sec = ms / 1000,
+      .tv_nsec = (ms % 1000) * 1000000
+  };
+  nanosleep(&ts, NULL);
+}
+
 /* tiler_sink_pad_buffer_probe  will extract metadata received on
    segmentation  src pad */
 static GstPadProbeReturn
@@ -83,7 +93,7 @@ bus_call(GstBus *bus G_GNUC_UNUSED, GstMessage *msg, gpointer data)
   case GST_MESSAGE_EOS:
     g_print("End of stream\n");
     // Add the delay to show the result
-    usleep(2000000);
+    msleep(2000);
     g_main_loop_quit(loop);
     break;
   case GST_MESSAGE_WARNING:
@@ -119,7 +129,7 @@ bus_call(GstBus *bus G_GNUC_UNUSED, GstMessage *msg, gpointer data)
       if (gst_nvmessage_parse_stream_eos(msg, &stream_id))
       {
         g_print("Got EOS from stream %d\n", stream_id);
-        usleep(2000000);
+        msleep(2000);
         g_main_loop_quit(loop);
       }
     }
