@@ -77,8 +77,6 @@ tiler_src_pad_buffer_probe(
 }
 
 
-
-
 static GstElement *
 create_source_bin(guint index, gchar *uri)
 {
@@ -87,25 +85,23 @@ create_source_bin(guint index, gchar *uri)
       *uri_decode_bin = NULL;
   gchar bin_name[16] = {0};
 
-  int current_device = -1;
-  cudaGetDevice(&current_device);
-  struct cudaDeviceProp prop;
-  cudaGetDeviceProperties(&prop, current_device);
-
   g_snprintf(bin_name, 15, "source-bin-%02d", index);
   /* Create a source GstBin to abstract this bin's content from the rest of the
    * pipeline */
   bin = gst_bin_new(bin_name);
+  if (!bin){
+    gst_object_unref(bin); 
+    g_printerr("element BIN in source bin could not be created.\n");
+    return NULL;
+  }
 
   /* Source element for reading from the uri.
    * We will use decodebin and let it figure out the container format of the
    * stream and the codec and plug the appropriate demux and decode plugins. */
-  uri_decode_bin = gst_element_factory_make("uridecodebin", "uri-decode-bin");
-  if (!bin || !uri_decode_bin)
+  uri_decode_bin=gst_element_factory_make("uridecodebin", "uri-decode-bin");
+  if (!uri_decode_bin)
   {
-    if (bin)
-      gst_object_unref(bin); // Если uri_decode_bin не создастся, функция вернёт NULL, но bin уже создан и не уничтожается.
-    g_printerr("One element in source bin could not be created.\n");
+    g_printerr("uri_decode_bin in source bin could not be created.\n");
     return NULL;
   }
   g_object_set(G_OBJECT(uri_decode_bin), "uri", uri, NULL);
@@ -142,18 +138,22 @@ usage(const char *bin)
   g_printerr("For nvinferserver, Usage: %s -t inferserver config_file <file1> [file2] ... [fileN]\n", bin);
 }
 
-static gboolean check_cuda_device()
+static int fill_cuda_device_prop( struct cudaDeviceProp *cuda_device_prop)
 {
-  int current_device = -1;
-  cudaGetDevice(&current_device);
-  struct cudaDeviceProp deviceProp;
-  cudaGetDeviceProperties(&deviceProp, current_device);
-  if (deviceProp.computeMode == cudaComputeModeProhibited)
-  {
-    g_printerr("CUDA device is running in <Compute Mode Prohibited>. Exiting.\n");
-    return FALSE;
+  int current_device_id = -1;
+  cudaError_t cuda_status = cudaGetDevice(&current_device_id);
+
+  if (cuda_status != cudaSuccess || current_device_id == -1){
+    g_printerr("CUDA device id error: %s\n", cudaGetErrorString(cuda_status));
+    return -1;
   }
-  return TRUE;
+
+  cuda_status = cudaGetDeviceProperties(cuda_device_prop, current_device_id);
+  if (cuda_status != cudaSuccess){
+    g_printerr("CUDA don`t get device prop error: %s\n", cudaGetErrorString(cuda_status));
+    return -1;
+  }
+  return 0;
 }
 
 int main(int argc, char *argv[])
@@ -184,21 +184,40 @@ int main(int argc, char *argv[])
   guint pgie_batch_size;
   gboolean is_nvinfer_server = FALSE;
   gchar *infer_config_file = NULL;
+  struct cudaDeviceProp cuda_device_prop;
 
-  check_cuda_device();
-  int current_device = -1;
-  cudaGetDevice(&current_device);
-  struct cudaDeviceProp prop;
-  cudaGetDeviceProperties(&prop, current_device);
-
-  // Проверка ошибок CUDA
-  // cudaError_t cuda_status = cudaGetDevice(&current_device);
-  cudaError_t cuda_status = cudaGetDeviceProperties(&prop, current_device);
-  if (cuda_status != cudaSuccess)
-  {
-    g_printerr("CUDA error: %s\n", cudaGetErrorString(cuda_status));
-    return -1;
+  if (fill_cuda_device_prop(&cuda_device_prop) == 0){
+    g_print("Current CUDA device id=%i\n", cuda_device_prop.pciDeviceID);
   }
+  
+  // int current_device = -1;
+  // cudaGetDevice(&current_device);
+  // struct cudaDeviceProp prop;
+  // cudaGetDeviceProperties(&prop, current_device);
+
+  // // Проверка ошибок CUDA
+  // // cudaError_t cuda_status = cudaGetDevice(&current_device);
+  // cudaError_t cuda_status = cudaGetDeviceProperties(&prop, current_device);
+  // if (cuda_status != cudaSuccess)
+  // {
+  //   g_printerr("CUDA error: %s\n", cudaGetErrorString(cuda_status));
+  //   return -1;
+  // }
+  // int current_device_id = -1;
+  // cudaError_t cuda_status = cudaGetDevice(&current_device_id);
+
+  // if (cuda_status != cudaSuccess || current_device_id == -1){
+  //   g_printerr("CUDA device num error: %s\n", cudaGetErrorString(cuda_status));
+  //   return -1;
+  // }
+
+  // struct cudaDeviceProp cuda_device_prop;
+  // cuda_status = cudaGetDeviceProperties(&cuda_device_prop, current_device_id);
+  // if (cuda_status != cudaSuccess){
+  //   g_printerr("CUDA don`t get device prop error: %s\n", cudaGetErrorString(cuda_status));
+  //   return -1;
+  // }
+
 
   //===========================================================================
   /* Check input arguments */
@@ -375,7 +394,7 @@ int main(int argc, char *argv[])
   // SINK
   //==========
 
-  if (prop.integrated)
+  if (cuda_device_prop.integrated)
   {
     CREATE_ELEMENT(sink, "nv3dsink", "nvvideo-renderer");
   }
