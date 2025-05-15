@@ -134,8 +134,13 @@ close_valve(gpointer valve)
 static void
 usage(const char *bin_name)
 {
-  g_printerr("Usage: %s config_file <file1> [file2] ... [fileN]\n", bin_name);
-  g_printerr("For nvinferserver, Usage: %s -t inferserver config_file <file1> [file2] ... [fileN]\n", bin_name);
+  g_printerr(" \
+Something wrong with arguments.\n \
+-------------------------------\n \
+Usage:\n %s config_file <file1> [file2] ... [fileN]\n\n", bin_name);
+  g_printerr(" \
+For nvinferserver, Usage:\n \
+%s -t inferserver config_file <file1> [file2] ... [fileN]\n", bin_name);
 }
 
 static int
@@ -215,8 +220,12 @@ int main(int argc, char *argv[])
   gchar *infer_config_file = NULL;
   struct cudaDeviceProp cuda_device_prop;
 
+  
+  if (check_input_arguments(argc, argv, &is_nvinfer_server)!= 0){
+    return -1;
+  }
+  
   fill_cuda_device_prop(&cuda_device_prop);
-  check_input_arguments(argc, argv, &is_nvinfer_server);
 
   if (is_nvinfer_server)
   {
