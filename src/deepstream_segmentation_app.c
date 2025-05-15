@@ -190,35 +190,6 @@ int main(int argc, char *argv[])
     g_print("Current CUDA device id=%i\n", cuda_device_prop.pciDeviceID);
   }
   
-  // int current_device = -1;
-  // cudaGetDevice(&current_device);
-  // struct cudaDeviceProp prop;
-  // cudaGetDeviceProperties(&prop, current_device);
-
-  // // Проверка ошибок CUDA
-  // // cudaError_t cuda_status = cudaGetDevice(&current_device);
-  // cudaError_t cuda_status = cudaGetDeviceProperties(&prop, current_device);
-  // if (cuda_status != cudaSuccess)
-  // {
-  //   g_printerr("CUDA error: %s\n", cudaGetErrorString(cuda_status));
-  //   return -1;
-  // }
-  // int current_device_id = -1;
-  // cudaError_t cuda_status = cudaGetDevice(&current_device_id);
-
-  // if (cuda_status != cudaSuccess || current_device_id == -1){
-  //   g_printerr("CUDA device num error: %s\n", cudaGetErrorString(cuda_status));
-  //   return -1;
-  // }
-
-  // struct cudaDeviceProp cuda_device_prop;
-  // cuda_status = cudaGetDeviceProperties(&cuda_device_prop, current_device_id);
-  // if (cuda_status != cudaSuccess){
-  //   g_printerr("CUDA don`t get device prop error: %s\n", cudaGetErrorString(cuda_status));
-  //   return -1;
-  // }
-
-
   //===========================================================================
   /* Check input arguments */
   //===========================================================================
