@@ -56,8 +56,8 @@
 
 // static gboolean PERF_MODE = FALSE;
 
-/* tiler_sink_pad_buffer_probe  will extract metadata received on
-   segmentation  src pad */
+/* tiler_sink_pad_buffer_probe  will extract metadata received 
+on segmentation  src pad */
 static GstPadProbeReturn
 tiler_src_pad_buffer_probe(
     GstPad *pad G_GNUC_UNUSED,
@@ -76,21 +76,19 @@ tiler_src_pad_buffer_probe(
   return GST_PAD_PROBE_OK;
 }
 
-
 static GstElement *
 create_source_bin(guint index, gchar *uri)
 {
-  GstElement
-      *bin = NULL,
-      *uri_decode_bin = NULL;
+  GstElement *bin = NULL;
+  GstElement *uri_decode_bin = NULL;
   gchar bin_name[16] = {0};
 
   g_snprintf(bin_name, 15, "source-bin-%02d", index);
   /* Create a source GstBin to abstract this bin's content from the rest of the
    * pipeline */
   bin = gst_bin_new(bin_name);
-  if (!bin){
-    gst_object_unref(bin); 
+  if (!bin)
+  {
     g_printerr("element BIN in source bin could not be created.\n");
     return NULL;
   }
@@ -98,10 +96,11 @@ create_source_bin(guint index, gchar *uri)
   /* Source element for reading from the uri.
    * We will use decodebin and let it figure out the container format of the
    * stream and the codec and plug the appropriate demux and decode plugins. */
-  uri_decode_bin=gst_element_factory_make("uridecodebin", "uri-decode-bin");
+  uri_decode_bin = gst_element_factory_make("uridecodebin", "uri-decode-bin");
   if (!uri_decode_bin)
   {
     g_printerr("uri_decode_bin in source bin could not be created.\n");
+    gst_object_unref(bin); //Освобождаем bin перед возвратом
     return NULL;
   }
   g_object_set(G_OBJECT(uri_decode_bin), "uri", uri, NULL);
@@ -124,7 +123,8 @@ create_source_bin(guint index, gchar *uri)
 }
 
 // Динамическое управление valve через 5 секунд
-static gboolean close_valve(gpointer valve)
+static gboolean
+close_valve(gpointer valve)
 {
   g_print("Closing valve...\n");
   g_object_set(valve, "drop", TRUE, NULL);
@@ -132,24 +132,27 @@ static gboolean close_valve(gpointer valve)
 }
 
 static void
-usage(const char *bin)
+usage(const char *bin_name)
 {
-  g_printerr("Usage: %s config_file <file1> [file2] ... [fileN]\n", bin);
-  g_printerr("For nvinferserver, Usage: %s -t inferserver config_file <file1> [file2] ... [fileN]\n", bin);
+  g_printerr("Usage: %s config_file <file1> [file2] ... [fileN]\n", bin_name);
+  g_printerr("For nvinferserver, Usage: %s -t inferserver config_file <file1> [file2] ... [fileN]\n", bin_name);
 }
 
-static int fill_cuda_device_prop( struct cudaDeviceProp *cuda_device_prop)
+static int
+fill_cuda_device_prop(struct cudaDeviceProp *cuda_device_prop)
 {
   int current_device_id = -1;
   cudaError_t cuda_status = cudaGetDevice(&current_device_id);
 
-  if (cuda_status != cudaSuccess || current_device_id == -1){
+  if (cuda_status != cudaSuccess || current_device_id == -1)
+  {
     g_printerr("CUDA device id error: %s\n", cudaGetErrorString(cuda_status));
     return -1;
   }
 
   cuda_status = cudaGetDeviceProperties(cuda_device_prop, current_device_id);
-  if (cuda_status != cudaSuccess){
+  if (cuda_status != cudaSuccess)
+  {
     g_printerr("CUDA don`t get device prop error: %s\n", cudaGetErrorString(cuda_status));
     return -1;
   }
@@ -186,10 +189,12 @@ int main(int argc, char *argv[])
   gchar *infer_config_file = NULL;
   struct cudaDeviceProp cuda_device_prop;
 
-  if (fill_cuda_device_prop(&cuda_device_prop) == 0){
+  if (fill_cuda_device_prop(&cuda_device_prop) == 0)
+  {
     g_print("Current CUDA device id=%i\n", cuda_device_prop.pciDeviceID);
+    LOG_ERROR("Failed to initialize CUDA");
   }
-  
+
   //===========================================================================
   /* Check input arguments */
   //===========================================================================
