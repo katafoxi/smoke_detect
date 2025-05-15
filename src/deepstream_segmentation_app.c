@@ -56,7 +56,7 @@
 
 // static gboolean PERF_MODE = FALSE;
 
-/* tiler_sink_pad_buffer_probe  will extract metadata received 
+/* tiler_sink_pad_buffer_probe  will extract metadata received
 on segmentation  src pad */
 static GstPadProbeReturn
 tiler_src_pad_buffer_probe(
@@ -100,7 +100,7 @@ create_source_bin(guint index, gchar *uri)
   if (!uri_decode_bin)
   {
     g_printerr("uri_decode_bin in source bin could not be created.\n");
-    gst_object_unref(bin); //Освобождаем bin перед возвратом
+    gst_object_unref(bin); // Освобождаем bin перед возвратом
     return NULL;
   }
   g_object_set(G_OBJECT(uri_decode_bin), "uri", uri, NULL);
@@ -142,19 +142,45 @@ static int
 fill_cuda_device_prop(struct cudaDeviceProp *cuda_device_prop)
 {
   int current_device_id = -1;
-  cudaError_t cuda_status = cudaGetDevice(&current_device_id);
+  cudaError_t cuda_err = cudaGetDevice(&current_device_id);
 
-  if (cuda_status != cudaSuccess || current_device_id == -1)
+  if (cuda_err != cudaSuccess || current_device_id == -1)
   {
-    g_printerr("CUDA device id error: %s\n", cudaGetErrorString(cuda_status));
+    g_printerr("CUDA error getting device_id: %s\n", cudaGetErrorString(cuda_err));
     return -1;
   }
 
-  cuda_status = cudaGetDeviceProperties(cuda_device_prop, current_device_id);
-  if (cuda_status != cudaSuccess)
+  cuda_err = cudaGetDeviceProperties(cuda_device_prop, current_device_id);
+  if (cuda_err != cudaSuccess)
   {
-    g_printerr("CUDA don`t get device prop error: %s\n", cudaGetErrorString(cuda_status));
+    g_printerr("CUDA don`t get device prop error: %s\n", cudaGetErrorString(cuda_err));
     return -1;
+  }
+  g_print("Using CUDA device %d: %s\n", current_device_id, cuda_device_prop->name);
+  return 0;
+}
+
+static int
+check_input_arguments(int argc, char *argv[], gboolean *is_nvinfer_server)
+{
+  if (argc < 3)
+  {
+    usage(argv[0]);
+    return -1;
+  }
+
+  if (argc >= 3 && !strcmp("-t", argv[1]))
+  {
+    if (!strcmp("inferserver", argv[2]))
+    {
+      *is_nvinfer_server = TRUE;
+    }
+    else
+    {
+      usage(argv[0]);
+      return -1;
+    }
+    g_print("Using nvinferserver as the inference plugin\n");
   }
   return 0;
 }
@@ -189,34 +215,8 @@ int main(int argc, char *argv[])
   gchar *infer_config_file = NULL;
   struct cudaDeviceProp cuda_device_prop;
 
-  if (fill_cuda_device_prop(&cuda_device_prop) == 0)
-  {
-    g_print("Current CUDA device id=%i\n", cuda_device_prop.pciDeviceID);
-    LOG_ERROR("Failed to initialize CUDA");
-  }
-
-  //===========================================================================
-  /* Check input arguments */
-  //===========================================================================
-  if (argc < 3)
-  {
-    usage(argv[0]);
-    return -1;
-  }
-
-  if (argc >= 3 && !strcmp("-t", argv[1]))
-  {
-    if (!strcmp("inferserver", argv[2]))
-    {
-      is_nvinfer_server = TRUE;
-    }
-    else
-    {
-      usage(argv[0]);
-      return -1;
-    }
-    g_print("Using nvinferserver as the inference plugin\n");
-  }
+  fill_cuda_device_prop(&cuda_device_prop);
+  check_input_arguments(argc, argv, &is_nvinfer_server);
 
   if (is_nvinfer_server)
   {
@@ -454,13 +454,11 @@ int main(int argc, char *argv[])
   if (!text_src_pad || !text_sink_pad)
   {
     g_printerr("Не найдены pad'ы для текстового соединения!\n");
-    gst_object_unref(pipeline);
     return -1;
   }
   if (gst_pad_link(text_src_pad, text_sink_pad) != GST_PAD_LINK_OK)
   {
     g_printerr("Не удалось соединить текст-источник с textoverlay!\n");
-    gst_object_unref(pipeline);
     return -1;
   }
   g_print("Link text_src_pad to textoverlay\n");
@@ -488,7 +486,7 @@ int main(int argc, char *argv[])
   g_timeout_add_seconds(5, (GSourceFunc)close_valve, valve);
 
   /* Wait till pipeline encounters an error or EOS */
-  g_print("Running...\n");
+  g_print("Main loop running...\n");
   g_main_loop_run(loop);
 
   /* Out of the main loop, clean up nicely */
