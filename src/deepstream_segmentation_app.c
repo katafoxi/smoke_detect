@@ -25,6 +25,15 @@
 #include <time.h> // Добавлено для nanosleep
 #include "callback.h"
 
+struct app_init_conf
+{
+  int argc;
+  char **argv;
+  gboolean is_nvinfer_server;
+  gchar *infer_config_file;
+  guint num_sources;
+} AppConf;
+
 /* The muxer output resolution must be set if the input streams will be of
  * different resolution. The muxer will scale all the input frames to this
  * resolution. */
@@ -137,10 +146,12 @@ usage(const char *bin_name)
   g_printerr(" \
 Something wrong with arguments.\n \
 -------------------------------\n \
-Usage:\n %s config_file <file1> [file2] ... [fileN]\n\n", bin_name);
+Usage:\n %s config_file <file1> [file2] ... [fileN]\n\n",
+             bin_name);
   g_printerr(" \
 For nvinferserver, Usage:\n \
-%s -t inferserver config_file <file1> [file2] ... [fileN]\n", bin_name);
+%s -t inferserver config_file <file1> [file2] ... [fileN]\n",
+             bin_name);
 }
 
 static int
@@ -166,27 +177,33 @@ fill_cuda_device_prop(struct cudaDeviceProp *cuda_device_prop)
 }
 
 static int
-check_input_arguments(int argc, char *argv[], gboolean *is_nvinfer_server)
+check_input_arguments(struct app_init_conf *conf)
 {
-  if (argc < 3)
+  if (conf->argc < 3)
   {
-    usage(argv[0]);
+    usage(conf->argv[0]);
     return -1;
   }
 
-  if (argc >= 3 && !strcmp("-t", argv[1]))
+  if (conf->argc >= 3 && !strcmp("-t", conf->argv[1]))
   {
-    if (!strcmp("inferserver", argv[2]))
+    if (!strcmp("inferserver", conf->argv[2]))
     {
-      *is_nvinfer_server = TRUE;
+      conf->is_nvinfer_server = TRUE;
+      conf->num_sources = conf->argc - 4;
+      conf->infer_config_file = conf->argv[3];
     }
     else
     {
-      usage(argv[0]);
+      usage((*conf).argv[0]);
       return -1;
     }
     g_print("Using nvinferserver as the inference plugin\n");
   }
+
+  conf->num_sources = conf->argc - 2;
+  conf->infer_config_file = conf->argv[1];
+
   return 0;
 }
 
@@ -213,30 +230,26 @@ int main(int argc, char *argv[])
   GstBus *bus = NULL;
   guint bus_watch_id;
   GstPad *tiler_src_pad = NULL;
-  guint i, num_sources = 0;
+  guint i;
+  // , num_sources = 0;
   // guint tiler_rows, tiler_columns;
   guint pgie_batch_size;
-  gboolean is_nvinfer_server = FALSE;
-  gchar *infer_config_file = NULL;
+  // gboolean is_nvinfer_server = FALSE;
+  // gchar *infer_config_file = NULL;
   struct cudaDeviceProp cuda_device_prop;
+  struct app_init_conf app_conf = {
+      .argc = argc,
+      .argv = argv,
+      .is_nvinfer_server = FALSE,
+      .infer_config_file = NULL,
+      .num_sources = 0};
 
-  
-  if (check_input_arguments(argc, argv, &is_nvinfer_server)!= 0){
+  if (check_input_arguments(&app_conf) != 0)
+  {
     return -1;
   }
-  
-  fill_cuda_device_prop(&cuda_device_prop);
 
-  if (is_nvinfer_server)
-  {
-    num_sources = argc - 4;
-    infer_config_file = argv[3];
-  }
-  else
-  {
-    num_sources = argc - 2;
-    infer_config_file = argv[1];
-  }
+  fill_cuda_device_prop(&cuda_device_prop);
 
   /* Standard GStreamer initialization */
   gst_init(&argc, &argv);
@@ -249,20 +262,20 @@ int main(int argc, char *argv[])
   /* Create nvstreammux instance to form batches from one or more sources. */
   CREATE_ELEMENT(streammux, "nvstreammux", "stream-muxer");
   g_object_set(G_OBJECT(streammux),
-               "batch-size", num_sources,
+               "batch-size", app_conf.num_sources,
                "width", MUXER_OUTPUT_WIDTH,
                "height", MUXER_OUTPUT_HEIGHT,
                "batched-push-timeout", MUXER_BATCH_TIMEOUT_USEC, NULL);
 
   gst_bin_add(GST_BIN(pipeline), streammux);
 
-  for (i = 0; i < num_sources; i++)
+  for (i = 0; i < app_conf.num_sources; i++)
   {
     GstPad *sinkpad, *srcpad;
     gchar pad_name[16] = {0};
     GstElement *source_bin = NULL;
 
-    if (is_nvinfer_server)
+    if (app_conf.is_nvinfer_server)
     {
       source_bin = create_source_bin(i, argv[i + 4]);
     }
@@ -308,11 +321,11 @@ int main(int argc, char *argv[])
   //==========
 
   /* Use nvinfer to infer on batched frame. */
-  CREATE_ELEMENT(pgie, is_nvinfer_server ? NVINFERSERVER_PLUGIN : NVINFER_PLUGIN, "primary-nvinference-engine");
+  CREATE_ELEMENT(pgie, app_conf.is_nvinfer_server ? NVINFERSERVER_PLUGIN : NVINFER_PLUGIN, "primary-nvinference-engine");
 
   /* Configure the nvinfer element using the nvinfer config file. */
   g_object_set(G_OBJECT(pgie),
-               "config-file-path", infer_config_file,
+               "config-file-path", app_conf.infer_config_file,
                "unique-id", 1,
                "infer-on-gie-id", 1,
                "infer-on-class-ids", "0:",
@@ -321,18 +334,18 @@ int main(int argc, char *argv[])
   /* Override the batch-size set in the config file with the number of sources. */
   g_object_get(G_OBJECT(pgie), "batch-size", &pgie_batch_size, NULL);
 
-  if (pgie_batch_size != num_sources && !is_nvinfer_server)
+  if (pgie_batch_size != app_conf.num_sources && !app_conf.is_nvinfer_server)
   {
     g_printerr("WARNING: Overriding infer-config batch-size (%d) with number of sources (%d)\n",
-               pgie_batch_size, num_sources);
+               pgie_batch_size, app_conf.num_sources);
     g_object_set(G_OBJECT(pgie),
-                 "batch-size", num_sources, NULL);
+                 "batch-size", app_conf.num_sources, NULL);
   }
 
   CREATE_ELEMENT(nvsegvisual, "nvsegvisual", "nvsegvisual");
   // https://forums.developer.nvidia.com/t/how-to-draw-masks-with-python/308209/9
   g_object_set(G_OBJECT(nvsegvisual),
-               "batch-size", num_sources,
+               "batch-size", app_conf.num_sources,
                "width", 512,
                "height", 512,
                "alpha", 0.7,                // [float 0-1] Значение альфа для смешивания по пикселям.
