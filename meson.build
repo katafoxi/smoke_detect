@@ -46,7 +46,8 @@ cuda_inc_dir = '/usr/local/cuda-' + cuda_ver + '/include'
 executable('segmsmoke_app',
   sources: files(
     './src/deepstream_segmentation_app.c',  # Добавьте здесь все другие .c файлы, если они есть
-    './src/callback.c'
+    './src/callback.c',
+    './src/pipeline.c'
   ),
   include_directories: [
     include_directories(deepstream_inc_dir),
