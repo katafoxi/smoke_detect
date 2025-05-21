@@ -24,7 +24,7 @@
 #include "gst-nvmessage.h"
 #include <time.h> // Добавлено для nanosleep
 
-#include "structs.h"
+#include "app_conf_parser.h"
 #include "callback.h"
 #include "pipeline.h"
 
@@ -40,20 +40,6 @@ close_valve(gpointer valve)
   g_print("Closing valve...\n");
   g_object_set(valve, "drop", TRUE, NULL);
   return G_SOURCE_REMOVE;
-}
-
-static void
-usage(const char *bin_name)
-{
-  g_printerr(" \
-Something wrong with arguments.\n \
--------------------------------\n \
-Usage:\n %s config_file <file1> [file2] ... [fileN]\n\n",
-             bin_name);
-  g_printerr(" \
-For nvinferserver, Usage:\n \
-%s -t inferserver config_file <file1> [file2] ... [fileN]\n",
-             bin_name);
 }
 
 static gboolean
@@ -79,54 +65,26 @@ fill_cuda_device_prop()
   return cuda_device_prop.integrated;
 }
 
-static int
-check_input_arguments(app_init_context *conf)
-{
-  if (conf->argc < 3)
-  {
-    usage(conf->argv[0]);
-    return -1;
-  }
-
-  if (conf->argc >= 3 && !strcmp("-t", conf->argv[1]))
-  {
-    if (!strcmp("inferserver", conf->argv[2]))
-    {
-      conf->is_nvinfer_server = TRUE;
-      conf->num_sources = conf->argc - 4;
-      conf->infer_config_file = conf->argv[3];
-    }
-    else
-    {
-      usage((*conf).argv[0]);
-      return -1;
-    }
-    g_print("Using nvinferserver as the inference plugin\n");
-  }
-
-  conf->num_sources = conf->argc - 2;
-  conf->infer_config_file = conf->argv[1];
-
-  return 0;
-}
-
 int main(int argc, char *argv[])
 {
   GMainLoop *loop = NULL;
   GstBus *bus = NULL;
   guint bus_watch_id;
 
-  app_init_context app_conf = {
-      .argc = argc,
-      .argv = argv,
-      .is_cuda_device_integrated = fill_cuda_device_prop(),
-      .is_nvinfer_server = FALSE,
-      .infer_config_file = NULL,
-      .num_sources = 0,
-      .output_filename = "output.mp4"};
-
-  if (check_input_arguments(&app_conf) != 0)
+  app_init_context *app_conf = parse_config_file(argv[1]);
+  if (!app_conf)
   {
+    return EXIT_FAILURE;
+  }
+  app_conf->is_cuda_device_integrated = fill_cuda_device_prop();
+  g_print("infer_conf_path %s\n", app_conf->infer_config_file);
+
+  if (argc < 2)
+  {
+    g_printerr(" \
+Something wrong with arguments.\n \
+-------------------------------\n \
+Usage:\n <APP> <app_config_file>\n\n");
     return -1;
   }
 
@@ -134,8 +92,7 @@ int main(int argc, char *argv[])
   gst_init(&argc, &argv);
   loop = g_main_loop_new(NULL, FALSE);
 
-  PipelineComponents *pipeline_context = build_pipeline(&app_conf);
-
+  PipelineComponents *pipeline_context = build_pipeline(app_conf);
   if (!pipeline_context)
   {
     g_printerr("Failed to create pipeline\n");
@@ -149,7 +106,7 @@ int main(int argc, char *argv[])
 
   // Запуск pipeline
   /* Set the pipeline to "playing" state */
-  g_print("Now playing...\n");
+  g_print("Now playing...\n\n\n");
   gst_element_set_state(pipeline_context->pipeline, GST_STATE_PLAYING);
 
   // Исправление передачи аргумента в close_valve

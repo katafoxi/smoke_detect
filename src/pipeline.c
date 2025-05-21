@@ -56,43 +56,21 @@ PipelineComponents *build_pipeline(app_init_context *app_conf)
         GstPad *sinkpad, *srcpad;
         gchar pad_name[16] = {0};
         GstElement *source_bin = NULL;
-
-        if (app_conf->is_nvinfer_server)
-        {
-            source_bin = create_source_bin(i, app_conf->argv[i + 4]);
-        }
-        else
-        {
-            source_bin = create_source_bin(i, app_conf->argv[i + 2]);
-        }
-        if (!source_bin)
-        {
-            g_printerr("Failed to create source bin. Exiting.\n");
-            return NULL;
-        }
+        source_bin = create_source_bin(i, app_conf->sources[i]);
+        RETURN_IF_ERROR(!source_bin, "Failed to create source bin. Exiting.\n", NULL);
 
         gst_bin_add(GST_BIN(comp->pipeline), source_bin);
 
         g_snprintf(pad_name, 15, "sink_%u", i);
         sinkpad = gst_element_request_pad_simple(comp->streammux, pad_name);
-        if (!sinkpad)
-        {
-            g_printerr("Streammux request sink pad failed. Exiting.\n");
-            return NULL;
-        }
+        RETURN_IF_ERROR(!sinkpad, "Streammux request sink pad failed. Exiting.\n", NULL);
 
         srcpad = gst_element_get_static_pad(source_bin, "src");
-        if (!srcpad)
-        {
-            g_printerr("Failed to get src pad of source bin. Exiting.\n");
-            return NULL;
-        }
+        RETURN_IF_ERROR(!srcpad, "Failed to get src pad of source bin. Exiting.\n", NULL);
 
-        if (gst_pad_link(srcpad, sinkpad) != GST_PAD_LINK_OK)
-        {
-            g_printerr("Failed to link source bin to stream muxer. Exiting.\n");
-            return NULL;
-        }
+        RETURN_IF_ERROR(
+            gst_pad_link(srcpad, sinkpad) != GST_PAD_LINK_OK,
+            "Failed to link source bin to stream muxer. Exiting.\n", NULL);
 
         gst_object_unref(srcpad);
         gst_object_unref(sinkpad);

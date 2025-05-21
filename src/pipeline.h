@@ -3,7 +3,7 @@
 
 #include <gst/gst.h>
 #include <glib.h>
-#include "structs.h"
+#include "app_conf_parser.h"
 
 /* The muxer output resolution must be set if the input streams will be of
  * different resolution. The muxer will scale all the input frames to this

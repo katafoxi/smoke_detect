@@ -1,0 +1,29 @@
+{
+    "is_cuda_device_integrated": true,
+    "is_nvinfer_server": false,
+    "infer_config_file": "/wdir/smoke_detect/configs/segm_aa_infer_conf.txt",
+    "output_filename": "output1.mp4",
+    "muxer": {
+        "output_width": 1920,
+        "output_height": 1080,
+        "batch_timeout_usec": 40000
+    },
+    
+    "nvsegvisual": {
+        "width": 512,
+        "height": 512,
+        "alpha": 0.7
+    },
+    
+    "nvdosd": {
+        "clock_font_size": 12
+    },
+    
+    "valve": {
+        "video_duration_sec": 30
+    },
+    
+    "sources": [
+        "file:///wdir/smoke_detect/streams/OutputVideo1920p_yuv420p.mp4"
+    ]
+}

@@ -13,8 +13,6 @@ echo "$GST_PLUGIN_SYSTEM_PATH_1_0"
 #     dec. ! queue ! nvvidconv ! textoverlay name=overlay ! autovideosink \
 #   mysrc ! overlay.
 
- /wdir/smoke_detect/build/segmsmoke_app \
- /wdir/smoke_detect/configs/segm_aa_infer_conf.txt \
- file:///wdir/smoke_detect/streams/OutputVideo1920p_yuv420p.mp4
+ /wdir/smoke_detect/build/segmsmoke_app "app_config.json"
 
 

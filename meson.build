@@ -28,6 +28,7 @@ endforeach
 # Дополнительные зависимости
 math_dep = meson.get_compiler('c').find_library('m', required: true)
 cuda_dep = dependency('cuda', version: '==' + cuda_ver, required: true)
+jansson_dep = dependency('jansson')  # Добавляем Jansson
 
 # Пути для DeepStream
 deepstream_inc_dir = '/opt/nvidia/deepstream/deepstream-' + nvds_version + '/sources/includes'
@@ -47,7 +48,8 @@ executable('segmsmoke_app',
   sources: files(
     './src/deepstream_segmentation_app.c',  # Добавьте здесь все другие .c файлы, если они есть
     './src/callback.c',
-    './src/pipeline.c'
+    './src/pipeline.c',
+    './src/app_conf_parser.c'
   ),
   include_directories: [
     include_directories(deepstream_inc_dir),
@@ -58,6 +60,7 @@ executable('segmsmoke_app',
     deps,
     math_dep,
     cuda_dep,
+    jansson_dep
   ],
   link_args: [
     '-L' + lib_install_dir,
