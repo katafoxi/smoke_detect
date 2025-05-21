@@ -51,17 +51,17 @@ fill_cuda_device_prop()
 
   if (cuda_err != cudaSuccess || current_device_id == -1)
   {
-    g_printerr("CUDA error getting device_id: %s\n", cudaGetErrorString(cuda_err));
+    g_printerr("ERROR: CUDA error getting device_id: %s\n", cudaGetErrorString(cuda_err));
     return -1;
   }
 
   cuda_err = cudaGetDeviceProperties(&cuda_device_prop, current_device_id);
   if (cuda_err != cudaSuccess)
   {
-    g_printerr("CUDA don`t get device prop error: %s\n", cudaGetErrorString(cuda_err));
+    g_printerr("INFO: CUDA don`t get device prop error: %s\n", cudaGetErrorString(cuda_err));
     return -1;
   }
-  g_print("Using CUDA device %d: %s\n", current_device_id, cuda_device_prop.name);
+  g_print("INFO: Using CUDA device %d: %s\n", current_device_id, cuda_device_prop.name);
   return cuda_device_prop.integrated;
 }
 
@@ -95,7 +95,7 @@ Usage:\n <APP> <app_config_file>\n\n");
   PipelineComponents *pipeline_context = build_pipeline(app_conf);
   if (!pipeline_context)
   {
-    g_printerr("Failed to create pipeline\n");
+    g_printerr("ERROR: Failed to create pipeline\n");
     return -1;
   }
 
@@ -106,14 +106,14 @@ Usage:\n <APP> <app_config_file>\n\n");
 
   // Запуск pipeline
   /* Set the pipeline to "playing" state */
-  g_print("Now playing...\n\n\n");
+  g_print("INFO: Now playing...\n\n");
   gst_element_set_state(pipeline_context->pipeline, GST_STATE_PLAYING);
 
   // Исправление передачи аргумента в close_valve
   g_timeout_add_seconds(5, (GSourceFunc)close_valve, pipeline_context->valve);
 
   /* Wait till pipeline encounters an error or EOS */
-  g_print("Main loop running...\n");
+  g_print("INFO: Main loop running...\n");
   g_main_loop_run(loop);
 
   // Очистка
