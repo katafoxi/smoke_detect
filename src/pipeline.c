@@ -202,8 +202,8 @@ PipelineComponents *build_pipeline(app_init_context *app_conf)
     GstCaps *caps;
     caps = gst_caps_new_simple("video/x-raw(memory:NVMM)",
                                "format", G_TYPE_STRING, "RGBA",
-                               "width", G_TYPE_INT, 612,
-                               "height", G_TYPE_INT, 612,
+                               "width", G_TYPE_INT, 1000,
+                               "height", G_TYPE_INT, 1000,
                                "framerate", GST_TYPE_FRACTION, 30, 1,
                                NULL);
     // Применение caps к выходному порту nvvideoconvert
@@ -217,7 +217,19 @@ PipelineComponents *build_pipeline(app_init_context *app_conf)
     // GstPad *check_pad = gst_element_get_static_pad(comp->nvvidconv, "src");
     // g_print("Caps after setting: %" GST_PTR_FORMAT "\n", gst_pad_get_current_caps(check_pad));
     // gst_object_unref(check_pad);
-    LINK_ELEMENTS(comp->text_src, comp->textoverlay);
+
+    // LINK_ELEMENTS(comp->text_src, comp->textoverlay);
+    // Ручное соединение text_src → textoverlay (текст-вход)
+    GstPad *text_src_pad = gst_element_get_static_pad(comp->text_src, "src");
+    GstPad *text_sink_pad = gst_element_get_static_pad(comp->textoverlay, "text_sink");
+    RETURN_IF_ERROR(!text_src_pad || !text_sink_pad,
+                    "No pads found for gps_to_text connection!\n", NULL);
+    RETURN_IF_ERROR(gst_pad_link(text_src_pad, text_sink_pad) != GST_PAD_LINK_OK,
+                    "Failed to merge source text with textoverlay!\n", NULL);
+    g_print("Link text_src_pad to textoverlay\n");
+    gst_object_unref(text_src_pad);
+    gst_object_unref(text_sink_pad);
+
     LINK_ELEMENTS(comp->textoverlay, comp->tee);
 
     // LINK_ELEMENTS(comp->streammux, comp->pgie);
@@ -238,25 +250,6 @@ PipelineComponents *build_pipeline(app_init_context *app_conf)
     LINK_ELEMENTS(comp->x264enc, comp->filesink);
 
 #undef LINK_ELEMENTS
-
-    // // Ручное соединение text_src → textoverlay (текст-вход)
-    // GstPad *text_src_pad = gst_element_get_static_pad(comp->text_src, "src");
-    // GstPad *text_sink_pad = gst_element_get_static_pad(comp->textoverlay, "text_sink");
-
-    // if (!text_src_pad || !text_sink_pad)
-    // {
-    //     g_printerr("Не найдены pad'ы для текстового соединения!\n");
-    //     return NULL;
-    // }
-    // if (gst_pad_link(text_src_pad, text_sink_pad) != GST_PAD_LINK_OK)
-    // {
-    //     g_printerr("Не удалось соединить текст-источник с textoverlay!\n");
-    //     return NULL;
-    // }
-    // g_print("Link text_src_pad to textoverlay\n");
-
-    // gst_object_unref(text_src_pad);
-    // gst_object_unref(text_sink_pad);
 
     return comp;
 }
