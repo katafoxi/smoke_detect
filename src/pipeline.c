@@ -44,8 +44,8 @@ PipelineComponents *build_pipeline(app_init_context *app_conf)
     CREATE_ELEMENT(comp->streammux, "nvstreammux", "stream-muxer");
     g_object_set(G_OBJECT(comp->streammux),
                  "batch-size", app_conf->num_sources,
-                 "width", MUXER_OUTPUT_WIDTH,
-                 "height", MUXER_OUTPUT_HEIGHT,
+                 "width", app_conf->muxer_output_width,
+                 "height", app_conf->muxer_output_height,
                  "batched-push-timeout", MUXER_BATCH_TIMEOUT_USEC,
                  NULL);
 
@@ -53,6 +53,7 @@ PipelineComponents *build_pipeline(app_init_context *app_conf)
 
     for (i = 0; i < app_conf->num_sources; i++)
     {
+        RETURN_IF_ERROR(!app_conf->sources[i], "Source URI is NULL", NULL);
         GstPad *sinkpad, *srcpad;
         gchar pad_name[16] = {0};
         GstElement *source_bin = NULL;
@@ -102,14 +103,14 @@ PipelineComponents *build_pipeline(app_init_context *app_conf)
     CREATE_ELEMENT(comp->nvsegvisual, "nvsegvisual", "nvsegvisual");
     g_object_set(G_OBJECT(comp->nvsegvisual),
                  "batch-size", app_conf->num_sources,
-                 "width", 512,
-                 "height", 512,
-                 "alpha", 0.7,                // [float 0-1] Значение альфа для смешивания по пикселям.
-                 "class-id", 0,               // [uint](0) Идентификатор класса фона, должен быть установлен, если original-background установлен в TRUE
-                 "gpu-on", 1,                 // [bool](1) Переключение между памятью устройства и хоста
-                 "operate-on-seg-meta-id", 1, // [int](-1) Визуализация сегментации на seg-metadata с этим уникальным идентификатором. Установите значение -1 для визуализации всех метаданных.
-                 "original-background", 1,    // [bool](0) вместо маскированного фона показывать оригинальный фон.
-                 "qos", 0,                    // [bool](0) обработка событий качества обслуживания
+                 "width", app_conf->nvsegvisual_width,
+                 "height", app_conf->nvsegvisual_height,
+                 "alpha", app_conf->nvsegvisual_alpha, // [float 0-1] Значение альфа для смешивания по пикселям.
+                 "class-id", 0,                        // [uint](0) Идентификатор класса фона, должен быть установлен, если original-background установлен в TRUE
+                 "gpu-on", 1,                          // [bool](1) Переключение между памятью устройства и хоста
+                 "operate-on-seg-meta-id", 1,          // [int](-1) Визуализация сегментации на seg-metadata с этим уникальным идентификатором. Установите значение -1 для визуализации всех метаданных.
+                 "original-background", 1,             // [bool](0) вместо маскированного фона показывать оригинальный фон.
+                 "qos", 0,                             // [bool](0) обработка событий качества обслуживания
                  NULL);
 
     // 5. Наложение метаданных (bounding boxes, текст) https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_plugin_gst-nvdsosd.html
@@ -195,8 +196,38 @@ PipelineComponents *build_pipeline(app_init_context *app_conf)
     LINK_ELEMENTS(comp->pgie, comp->nvsegvisual);
     LINK_ELEMENTS(comp->nvsegvisual, comp->nvdsosd);
     LINK_ELEMENTS(comp->nvdsosd, comp->nvvidconv);
-    LINK_ELEMENTS(comp->nvvidconv, comp->textoverlay);
+
+    // LINK_ELEMENTS(comp->nvvidconv, comp->textoverlay);
+    // Установка caps для выхода nvvideoconvert в RAW (например, BGRx)
+    GstCaps *caps;
+    caps = gst_caps_new_simple("video/x-raw(memory:NVMM)",
+                               "format", G_TYPE_STRING, "RGBA",
+                               "width", G_TYPE_INT, 612,
+                               "height", G_TYPE_INT, 612,
+                               "framerate", GST_TYPE_FRACTION, 30, 1,
+                               NULL);
+    // Применение caps к выходному порту nvvideoconvert
+    // GstPad *convert_src_pad = gst_element_get_static_pad(comp->nvvidconv, "src");
+    // gst_pad_set_caps(convert_src_pad, caps);
+    gboolean link_ok;
+    link_ok = gst_element_link_filtered(comp->nvvidconv, comp->textoverlay, caps);
+    RETURN_IF_ERROR(!link_ok, "Не удалось связать конвертер с textoverlay через фильтр", NULL);
+    // gst_object_unref(caps);
+    // Проверка установленных caps
+    // GstPad *check_pad = gst_element_get_static_pad(comp->nvvidconv, "src");
+    // g_print("Caps after setting: %" GST_PTR_FORMAT "\n", gst_pad_get_current_caps(check_pad));
+    // gst_object_unref(check_pad);
+    LINK_ELEMENTS(comp->text_src, comp->textoverlay);
     LINK_ELEMENTS(comp->textoverlay, comp->tee);
+
+    // LINK_ELEMENTS(comp->streammux, comp->pgie);
+    // LINK_ELEMENTS(comp->pgie, comp->nvsegvisual);
+    // LINK_ELEMENTS(comp->nvsegvisual, comp->nvdsosd);
+
+    // LINK_ELEMENTS(comp->nvdsosd, comp->textoverlay);
+    // LINK_ELEMENTS(comp->text_src, comp->textoverlay);
+    // LINK_ELEMENTS(comp->textoverlay, comp->nvvidconv);
+    // LINK_ELEMENTS(comp->nvvidconv, comp->tee);
 
     LINK_ELEMENTS(comp->tee, comp->queue1);
     LINK_ELEMENTS(comp->queue1, comp->sink);
@@ -208,24 +239,24 @@ PipelineComponents *build_pipeline(app_init_context *app_conf)
 
 #undef LINK_ELEMENTS
 
-    // Ручное соединение text_src → textoverlay (текст-вход)
-    GstPad *text_src_pad = gst_element_get_static_pad(comp->text_src, "src");
-    GstPad *text_sink_pad = gst_element_get_static_pad(comp->textoverlay, "text_sink");
+    // // Ручное соединение text_src → textoverlay (текст-вход)
+    // GstPad *text_src_pad = gst_element_get_static_pad(comp->text_src, "src");
+    // GstPad *text_sink_pad = gst_element_get_static_pad(comp->textoverlay, "text_sink");
 
-    if (!text_src_pad || !text_sink_pad)
-    {
-        g_printerr("Не найдены pad'ы для текстового соединения!\n");
-        return NULL;
-    }
-    if (gst_pad_link(text_src_pad, text_sink_pad) != GST_PAD_LINK_OK)
-    {
-        g_printerr("Не удалось соединить текст-источник с textoverlay!\n");
-        return NULL;
-    }
-    g_print("Link text_src_pad to textoverlay\n");
+    // if (!text_src_pad || !text_sink_pad)
+    // {
+    //     g_printerr("Не найдены pad'ы для текстового соединения!\n");
+    //     return NULL;
+    // }
+    // if (gst_pad_link(text_src_pad, text_sink_pad) != GST_PAD_LINK_OK)
+    // {
+    //     g_printerr("Не удалось соединить текст-источник с textoverlay!\n");
+    //     return NULL;
+    // }
+    // g_print("Link text_src_pad to textoverlay\n");
 
-    gst_object_unref(text_src_pad);
-    gst_object_unref(text_sink_pad);
+    // gst_object_unref(text_src_pad);
+    // gst_object_unref(text_sink_pad);
 
     return comp;
 }
@@ -264,7 +295,6 @@ GstElement *create_source_bin(guint index, const gchar *uri)
     /* Source element for reading from the uri.
      * We will use decodebin and let it figure out the container format of the
      * stream and the codec and plug the appropriate demux and decode plugins. */
-    uri_decode_bin = gst_element_factory_make("uridecodebin", "uri-decode-bin");
     CREATE_ELEMENT(uri_decode_bin, "uridecodebin", "uri-decode-bin");
     g_object_set(G_OBJECT(uri_decode_bin), "uri", uri, NULL);
 

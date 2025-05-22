@@ -72,7 +72,7 @@ app_init_context* parse_config_file(const char* config_path) {
     json_t *nvsegvisual = json_object_get(root, "nvsegvisual");
     if (nvsegvisual) {
         CONFIG_GET_INT(nvsegvisual, width, config->nvsegvisual_width);
-        CONFIG_GET_INT(nvsegvisual, height, config->nvsegvisual_heidght);
+        CONFIG_GET_INT(nvsegvisual, height, config->nvsegvisual_height);
         CONFIG_GET_FLOAT(nvsegvisual, alpha, config->nvsegvisual_alpha);
     }
 

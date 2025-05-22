@@ -16,7 +16,7 @@ typedef struct
     int muxer_output_height;
     int muxer_batch_timeout_usec;
     int nvsegvisual_width;
-    int nvsegvisual_heidght;
+    int nvsegvisual_height;
     float nvsegvisual_alpha;
     int nvdosd_clock_font_size;
     int valve_video_duration_sec;
