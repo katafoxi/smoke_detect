@@ -71,6 +71,7 @@ app_init_context* parse_config_file(const char* config_path) {
     // 5. Парсинг параметров nvsegvisual
     json_t *nvsegvisual = json_object_get(root, "nvsegvisual");
     if (nvsegvisual) {
+        CONFIG_GET_BOOL(nvsegvisual, is_working, config->nvsegvisual_is_working);
         CONFIG_GET_INT(nvsegvisual, width, config->nvsegvisual_width);
         CONFIG_GET_INT(nvsegvisual, height, config->nvsegvisual_height);
         CONFIG_GET_FLOAT(nvsegvisual, alpha, config->nvsegvisual_alpha);

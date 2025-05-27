@@ -10,6 +10,7 @@
     },
     
     "nvsegvisual": {
+        "is_working": true,
         "width": 512,
         "height": 512,
         "alpha": 0.7

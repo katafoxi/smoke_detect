@@ -15,6 +15,7 @@ typedef struct
     int muxer_output_width;
     int muxer_output_height;
     int muxer_batch_timeout_usec;
+    gboolean nvsegvisual_is_working;
     int nvsegvisual_width;
     int nvsegvisual_height;
     float nvsegvisual_alpha;
