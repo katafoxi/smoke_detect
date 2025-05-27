@@ -100,18 +100,21 @@ PipelineComponents *build_pipeline(app_init_context *app_conf)
 
     // 4. Визуализация сегментации https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_plugin_gst-nvsegvisual.html
     // https://forums.developer.nvidia.com/t/how-to-draw-masks-with-python/308209/9
-    CREATE_ELEMENT(comp->nvsegvisual, "nvsegvisual", "nvsegvisual");
-    g_object_set(G_OBJECT(comp->nvsegvisual),
-                 "batch-size", app_conf->num_sources,
-                 "width", app_conf->nvsegvisual_width,
-                 "height", app_conf->nvsegvisual_height,
-                 "alpha", app_conf->nvsegvisual_alpha, // [float 0-1] Значение альфа для смешивания по пикселям.
-                 "class-id", 0,                        // [uint](0) Идентификатор класса фона, должен быть установлен, если original-background установлен в TRUE
-                 "gpu-on", 1,                          // [bool](1) Переключение между памятью устройства и хоста
-                 "operate-on-seg-meta-id", 1,          // [int](-1) Визуализация сегментации на seg-metadata с этим уникальным идентификатором. Установите значение -1 для визуализации всех метаданных.
-                 "original-background", 1,             // [bool](0) вместо маскированного фона показывать оригинальный фон.
-                 "qos", 0,                             // [bool](0) обработка событий качества обслуживания
-                 NULL);
+    if (app_conf->nvsegvisual_is_working)
+    {
+        CREATE_ELEMENT(comp->nvsegvisual, "nvsegvisual", "nvsegvisual");
+        g_object_set(G_OBJECT(comp->nvsegvisual),
+                     "batch-size", app_conf->num_sources,
+                     "width", app_conf->nvsegvisual_width,
+                     "height", app_conf->nvsegvisual_height,
+                     "alpha", app_conf->nvsegvisual_alpha, // [float 0-1] Значение альфа для смешивания по пикселям.
+                     "class-id", 0,                        // [uint](0) Идентификатор класса фона, должен быть установлен, если original-background установлен в TRUE
+                     "gpu-on", 1,                          // [bool](1) Переключение между памятью устройства и хоста
+                     "operate-on-seg-meta-id", 1,          // [int](-1) Визуализация сегментации на seg-metadata с этим уникальным идентификатором. Установите значение -1 для визуализации всех метаданных.
+                     "original-background", 1,             // [bool](0) вместо маскированного фона показывать оригинальный фон.
+                     "qos", 0,                             // [bool](0) обработка событий качества обслуживания
+                     NULL);
+    };
 
     // 5. Наложение метаданных (bounding boxes, текст) https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_plugin_gst-nvdsosd.html
     CREATE_ELEMENT(comp->nvdsosd, "nvdsosd", "nvdsosd");
@@ -168,7 +171,6 @@ PipelineComponents *build_pipeline(app_init_context *app_conf)
     /* Add all elements into the pipeline */
     gst_bin_add_many(GST_BIN(comp->pipeline),
                      comp->pgie,
-                     comp->nvsegvisual,
                      comp->nvdsosd,
                      comp->nvvidconv,
                      comp->text_src,
@@ -180,6 +182,11 @@ PipelineComponents *build_pipeline(app_init_context *app_conf)
                      comp->sink,
                      comp->x264enc,
                      comp->filesink, NULL);
+
+    if (app_conf->nvsegvisual_is_working)
+    {
+        gst_bin_add(GST_BIN(comp->pipeline), comp->nvsegvisual);
+    }
 
     // 8. Связываем элементы
 
@@ -193,8 +200,15 @@ PipelineComponents *build_pipeline(app_init_context *app_conf)
 
     /* Link the elements together with error checking */
     LINK_ELEMENTS(comp->streammux, comp->pgie);
-    LINK_ELEMENTS(comp->pgie, comp->nvsegvisual);
-    LINK_ELEMENTS(comp->nvsegvisual, comp->nvdsosd);
+    if (app_conf->nvsegvisual_is_working)
+    {
+        LINK_ELEMENTS(comp->pgie, comp->nvsegvisual);
+        LINK_ELEMENTS(comp->nvsegvisual, comp->nvdsosd);
+    }
+    else{
+        LINK_ELEMENTS(comp->pgie, comp->nvdsosd);
+    }
+    
     LINK_ELEMENTS(comp->nvdsosd, comp->nvvidconv);
 
     // LINK_ELEMENTS(comp->nvvidconv, comp->textoverlay);
